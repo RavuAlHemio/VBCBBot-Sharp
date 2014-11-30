@@ -11,12 +11,27 @@ namespace VBCBBot
         [JsonObject]
         public class ForumConfig
         {
-            public string Url;
             public string Username;
             public string Password;
             public List<string> BannedUsers;
             public double RefreshTime;
             public string TeXPrefix;
+
+            [JsonProperty("Url")]
+            public string UrlString
+            {
+                get
+                {
+                    return Url.ToString();
+                }
+                set
+                {
+                    Url = new Uri(value);
+                }
+            }
+
+            [JsonIgnore]
+            public Uri Url;
 
             [JsonProperty("CustomSmileys")]
             public Dictionary<string, string> CustomSmileysToUrls;
@@ -36,8 +51,15 @@ namespace VBCBBot
             }
         }
 
+        [JsonObject]
+        public class HtmlDecompilerConfig
+        {
+            public Dictionary<string, string> SmileyUrlToSymbol;
+        }
+
         public Config(string configString)
         {
+            // TODO: write me
         }
     }
 }

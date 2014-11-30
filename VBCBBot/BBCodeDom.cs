@@ -85,7 +85,7 @@ namespace VBCBBot
             public string Name { get; protected set; }
             public string AttributeValue { get; protected set; }
 
-            public Element(string name, string attributeValue, Node[] children)
+            public Element(string name, Node[] children, string attributeValue = null)
                 : base(children)
             {
                 Name = name;
