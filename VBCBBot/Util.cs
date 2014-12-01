@@ -40,8 +40,8 @@ namespace VBCBBot
                     {
                         // lead surrogate without trail surrogate
                         // return both independently
-                        yield return precedingLeadSurrogate.ToString();
-                        yield return c.ToString();
+                        yield return new string(precedingLeadSurrogate, 1);
+                        yield return new string(c, 1);
                     }
 
                     awaitingTrailSurrogate = false;
@@ -53,7 +53,7 @@ namespace VBCBBot
                 }
                 else
                 {
-                    yield return c.ToString();
+                    yield return new string(c, 1);
                 }
             }
         }
@@ -69,57 +69,52 @@ namespace VBCBBot
             foreach (var pStr in StringToCodePointStrings(str))
             {
                 var p = Char.ConvertToUtf32(pStr, 0);
-                if (p == '\0')
+                switch (p)
                 {
-                    ret.Append("\\0");
-                }
-                else if (p == '\\')
-                {
-                    ret.Append("\\\\");
-                }
-                else if (p == '"')
-                {
-                    ret.Append("\\\"");
-                }
-                else if (p == '\a')
-                {
-                    ret.Append("\\a");
-                }
-                else if (p == '\b')
-                {
-                    ret.Append("\\b");
-                }
-                else if (p == '\f')
-                {
-                    ret.Append("\\f");
-                }
-                else if (p == '\n')
-                {
-                    ret.Append("\\n");
-                }
-                else if (p == '\r')
-                {
-                    ret.Append("\\r");
-                }
-                else if (p == '\t')
-                {
-                    ret.Append("\\t");
-                }
-                else if (p == '\v')
-                {
-                    ret.Append("\\v");
-                }
-                else if (p < ' ' || (p > '~' && p <= 0xFFFF))
-                {
-                    ret.AppendFormat("\\u{0:X4}", p);
-                }
-                else if (p > 0xFFFF)
-                {
-                    ret.AppendFormat("\\U{0:X8}", p);
-                }
-                else
-                {
-                    ret.Append((char)p);
+                    case '\0':
+                        ret.Append("\\0");
+                        break;
+                    case '\\':
+                        ret.Append("\\\\");
+                        break;
+                    case '"':
+                        ret.Append("\\\"");
+                        break;
+                    case '\a':
+                        ret.Append("\\a");
+                        break;
+                    case '\b':
+                        ret.Append("\\b");
+                        break;
+                    case '\f':
+                        ret.Append("\\f");
+                        break;
+                    case '\n':
+                        ret.Append("\\n");
+                        break;
+                    case '\r':
+                        ret.Append("\\r");
+                        break;
+                    case '\t':
+                        ret.Append("\\t");
+                        break;
+                    case '\v':
+                        ret.Append("\\v");
+                        break;
+                    default:
+                        if (p < ' ' || (p > '~' && p <= 0xFFFF))
+                        {
+                            ret.AppendFormat("\\u{0:X4}", p);
+                        }
+                        else if (p > 0xFFFF)
+                        {
+                            ret.AppendFormat("\\U{0:X8}", p);
+                        }
+                        else
+                        {
+                            ret.Append((char)p);
+                        }
+                        break;
                 }
             }
             ret.Append('"');

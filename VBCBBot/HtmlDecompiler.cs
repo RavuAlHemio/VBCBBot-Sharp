@@ -14,7 +14,7 @@ namespace VBCBBot
         private static readonly Regex YoutubeEmbedRegex = new Regex("^//www\\.youtube\\.com/([a-zA-Z0-9]+)\\?wmode=opaque$");
 
         protected Dictionary<string, string> InternalSmileyUrlToSymbol;
-        protected string TeXPrefix;
+        protected readonly string TeXPrefix;
         protected Regex RegexForNoparse;
 
         public static BBCodeDom.Node[] JoinAdjacentTextNodes(IEnumerable<BBCodeDom.Node> nodeList)
@@ -67,7 +67,7 @@ namespace VBCBBot
                     ret.Add(new BBCodeDom.TextNode(lastUnmatchedString));
                 }
 
-                ret.Add(new BBCodeDom.Element(elementTag, new[] { new BBCodeDom.TextNode(match.Value) }));
+                ret.Add(new BBCodeDom.Element(elementTag, new BBCodeDom.Node[] { new BBCodeDom.TextNode(match.Value) }));
 
                 lastUnmatchedStartIndex = match.Index + match.Length;
             }
@@ -83,14 +83,7 @@ namespace VBCBBot
 
         public HtmlDecompiler(IDictionary<string, string> smileyUrlToSymbol = null, string teXPrefix = null)
         {
-            if (smileyUrlToSymbol == null)
-            {
-                SmileyUrlToSymbol = new Dictionary<string, string>();
-            }
-            else
-            {
-                SmileyUrlToSymbol = new Dictionary<string, string>(smileyUrlToSymbol);
-            }
+            SmileyUrlToSymbol = smileyUrlToSymbol == null ? new Dictionary<string, string>() : new Dictionary<string, string>(smileyUrlToSymbol);
             TeXPrefix = teXPrefix;
         }
 
@@ -109,13 +102,11 @@ namespace VBCBBot
                 regexForNoparseString.Append("\\[+");
                 var smileyStrings = InternalSmileyUrlToSymbol.Values.ToList();
                 // warning: swapped parameters for descending sort!
-                smileyStrings.Sort((r, l) => {
-                    if (l.Length != r.Length)
-                    {
-                        return l.Length.CompareTo(r.Length);
-                    }
-                    return l.CompareTo(r);
-                });
+                smileyStrings.Sort((r, l) =>
+                    (l.Length != r.Length)
+                        ? l.Length.CompareTo(r.Length)
+                        : string.Compare(l, r, StringComparison.InvariantCulture)
+                );
                 foreach (var smileyString in smileyStrings)
                 {
                     regexForNoparseString.AppendFormat("|{0}", Regex.Escape(smileyString));
@@ -148,12 +139,12 @@ namespace VBCBBot
                         else if (TeXPrefix != null && imageSource.StartsWith(TeXPrefix))
                         {
                             var texCode = imageSource.Substring(TeXPrefix.Length);
-                            ret.Add(new BBCodeDom.Element("tex", new [] { new BBCodeDom.TextNode(texCode) }));
+                            ret.Add(new BBCodeDom.Element("tex", new BBCodeDom.Node[] { new BBCodeDom.TextNode(texCode) }));
                         }
                         else
                         {
                             // icon?
-                            ret.Add(new BBCodeDom.Element("icon", new [] { new BBCodeDom.TextNode(imageSource) }));
+                            ret.Add(new BBCodeDom.Element("icon", new BBCodeDom.Node[] { new BBCodeDom.TextNode(imageSource) }));
                         }
                     }
                     else if (childNode.Name == "a" && childNode.Attributes.Contains("href"))
@@ -263,7 +254,7 @@ namespace VBCBBot
                                     var spoilerPreElement = childNode.SelectSingleNode("./pre[@class='alt2']");
                                     if (spoilerPreElement != null)
                                     {
-                                        ret.Add(new BBCodeDom.Element("spoiler", new [] { new BBCodeDom.TextNode(spoilerPreElement.InnerText) }));
+                                        ret.Add(new BBCodeDom.Element("spoiler", new BBCodeDom.Node[] { new BBCodeDom.TextNode(spoilerPreElement.InnerText) }));
                                     }
                                 }
                             }
@@ -284,7 +275,7 @@ namespace VBCBBot
                                     // [code]
                                     // hopefully this is correct enough
                                     var codeString = string.Join("", childNode.SelectSingleNode(".//pre").InnerText);
-                                    ret.Add(new BBCodeDom.Element("code", new [] { new BBCodeDom.TextNode(codeString) }));
+                                    ret.Add(new BBCodeDom.Element("code", new BBCodeDom.Node[] { new BBCodeDom.TextNode(codeString) }));
                                 }
                                 else if (quoteDiv != null)
                                 {
@@ -317,7 +308,7 @@ namespace VBCBBot
                                 }
                                 else
                                 {
-                                    Logger.WarnFormat("skipping div.bbcode_container of unknown kind", cls);
+                                    Logger.Warn("skipping div.bbcode_container of unknown kind");
                                 }
                             }
                             else
@@ -344,7 +335,7 @@ namespace VBCBBot
                             {
                                 // YouTube embed
                                 var videoSelector = "youtube;" + match.Groups[1].Value;
-                                ret.Add(new BBCodeDom.Element("video", new [] { new BBCodeDom.TextNode("a video") }, videoSelector));
+                                ret.Add(new BBCodeDom.Element("video", new BBCodeDom.Node[] { new BBCodeDom.TextNode("a video") }, videoSelector));
                             }
                             else
                             {

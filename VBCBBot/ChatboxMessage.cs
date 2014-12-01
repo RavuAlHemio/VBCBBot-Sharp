@@ -24,7 +24,7 @@ namespace VBCBBot
         /// <param name="userNameNode">The name of the user who posted this message.</param>
         /// <param name="bodyNode">The body of the message.</param>
         /// <param name="timestamp">The time at which the message was posted..</param>
-        /// <param name="htmlDecompiler">The HTML decompiler to use.</param>
+        /// <param name="decompiler">The HTML decompiler to use.</param>
         public ChatboxMessage(long messageID, long userID, HtmlNode userNameNode, HtmlNode bodyNode, DateTime? timestamp = null, HtmlDecompiler decompiler = null)
         {
             ID = messageID;
@@ -40,14 +40,7 @@ namespace VBCBBot
         /// </summary>
         public string UserName
         {
-            get
-            {
-                if (_cachedUsername == null)
-                {
-                    _cachedUsername = UserNameNode.InnerText;
-                }
-                return _cachedUsername;
-            }
+            get { return _cachedUsername ?? (_cachedUsername = UserNameNode.InnerText); }
         }
 
         /// <summary>
@@ -77,14 +70,7 @@ namespace VBCBBot
         /// </summary>
         public string Body
         {
-            get
-            {
-                if (_cachedBody == null)
-                {
-                    _cachedBody = BodyNode.InnerText;
-                }
-                return _cachedBody;
-            }
+            get { return _cachedBody ?? (_cachedBody = BodyNode.InnerText); }
         }
 
         /// <summary>

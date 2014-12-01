@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace VBCBBot
+﻿namespace VBCBBot
 {
     public struct MessageToDistribute
     {

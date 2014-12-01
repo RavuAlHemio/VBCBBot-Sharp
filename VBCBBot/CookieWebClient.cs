@@ -9,7 +9,6 @@ namespace VBCBBot
         public int Timeout;
 
         public CookieWebClient()
-            : base()
         {
             CookieJar = new CookieContainer();
             Timeout = 100;
@@ -23,6 +22,11 @@ namespace VBCBBot
         protected override WebRequest GetWebRequest(Uri address)
         {
             var req = base.GetWebRequest(address);
+            if (req == null)
+            {
+                return null;
+            }
+
             req.Timeout = Timeout;
             if (req is HttpWebRequest)
             {

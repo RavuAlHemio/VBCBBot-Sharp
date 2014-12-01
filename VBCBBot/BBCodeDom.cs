@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 
 namespace VBCBBot
 {
@@ -59,16 +58,16 @@ namespace VBCBBot
 
         public abstract class NodeWithChildren : Node
         {
-            protected Node[] _children;
+            protected readonly Node[] InternalChildren;
 
-            public NodeWithChildren(Node[] children)
+            protected NodeWithChildren(Node[] children)
             {
-                _children = (Node[])children.Clone();
+                InternalChildren = (Node[])children.Clone();
             }
 
             public Node[] Children
             {
-                get { return (Node[])_children.Clone(); }
+                get { return (Node[])InternalChildren.Clone(); }
             }
 
             public override bool HasChildren
@@ -107,7 +106,7 @@ namespace VBCBBot
                         EscapedOpeningSquareBracket,
                         Name,
                         av,
-                        string.Join("", _children.Select(c => c.EscapedBBCodeString))
+                        string.Join("", InternalChildren.Select(c => c.EscapedBBCodeString))
                     );
                 }
             }
@@ -121,7 +120,7 @@ namespace VBCBBot
                         "[{0}{1}]{2}[/{0}]",
                         Name,
                         av,
-                        string.Join("", _children.Select(c => c.BBCodeString))
+                        string.Join("", InternalChildren.Select(c => c.BBCodeString))
                     );
                 }
             }
@@ -138,7 +137,7 @@ namespace VBCBBot
             {
                 get
                 {
-                    return "[noparse][*][/noparse]" + string.Join("", _children.Select(c => c.EscapedBBCodeString));
+                    return "[noparse][*][/noparse]" + string.Join("", InternalChildren.Select(c => c.EscapedBBCodeString));
                 }
             }
 
@@ -146,7 +145,7 @@ namespace VBCBBot
             {
                 get
                 {
-                    return "[*]" + string.Join("", _children.Select(c => c.BBCodeString));
+                    return "[*]" + string.Join("", InternalChildren.Select(c => c.BBCodeString));
                 }
             }
         }

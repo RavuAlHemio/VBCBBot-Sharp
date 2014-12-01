@@ -1,11 +1,9 @@
-﻿using System;
-
-namespace VBCBBot
+﻿namespace VBCBBot
 {
     public struct UserIDAndNickname
     {
-        public long UserID;
-        public string Nickname;
+        public readonly long UserID;
+        public readonly string Nickname;
 
         public UserIDAndNickname(long userID, string nickname)
         {
@@ -14,4 +12,3 @@ namespace VBCBBot
         }
     }
 }
-

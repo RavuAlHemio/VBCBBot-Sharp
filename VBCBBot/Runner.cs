@@ -1,14 +1,12 @@
-﻿using System;
-using System.IO;
-using log4net;
+﻿using System.IO;
 using log4net.Config;
 using log4net.Core;
 using log4net.Repository.Hierarchy;
 
 namespace VBCBBot
 {
-	public class Runner
-	{
+    public class Runner
+    {
         protected void SetupLogging()
         {
             var confFile = new FileInfo(Path.Combine(Util.ProgramDirectory, "Logging.conf"));
@@ -22,9 +20,5 @@ namespace VBCBBot
             var rootLogger = ((Hierarchy)log4net.LogManager.GetRepository()).Root;
             rootLogger.Level = Level.Debug;
         }
-
-        public Runner()
-		{
-		}
-	}
+    }
 }

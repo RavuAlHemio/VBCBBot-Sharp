@@ -25,36 +25,35 @@ namespace VBCBBot
 
         public event EventHandler<MessageUpdatedEventArgs> MessageUpdated;
 
-        public Config.ForumConfig ForumConfig;
-        public HtmlDecompiler Decompiler;
-        public int Timeout;
+        public readonly Config.ForumConfig ForumConfig;
+        public readonly HtmlDecompiler Decompiler;
+        public readonly int Timeout;
 
-        public Encoding ServerEncoding;
-        public int TimeBetweenReads;
-        public int DSTUpdateMinute;
-        public string MessageIDPiece;
-        public string UserIDPiece;
+        public readonly Encoding ServerEncoding;
+        public readonly int TimeBetweenReads;
+        public readonly int DSTUpdateMinute;
+        public readonly string MessageIDPiece;
+        public readonly string UserIDPiece;
 
-        public Uri LoginUrl;
-        public Uri CheapPageUrl;
-        public Uri PostEditUrl;
-        public Uri MessagesUrl;
-        public Uri SmiliesUrl;
-        public Uri AjaxUrl;
-        public Uri DSTUrl;
+        public readonly Uri LoginUrl;
+        public readonly Uri CheapPageUrl;
+        public readonly Uri PostEditUrl;
+        public readonly Uri MessagesUrl;
+        public readonly Uri SmiliesUrl;
+        public readonly Uri AjaxUrl;
+        public readonly Uri DSTUrl;
 
-        private object _cookieJarLid = new object();
-        private CookieWebClient _webClient = new CookieWebClient();
-        private Thread _readingThread;
+        private readonly object _cookieJarLid = new object();
+        private readonly CookieWebClient _webClient = new CookieWebClient();
+        private readonly Thread _readingThread;
 
-        private ISet<string> _bannedNicknames = new HashSet<string>();
-        //private ISet<IChatboxSubscriber> _subscribers = new HashSet<IChatboxSubscriber>();
+        private readonly ISet<string> _bannedNicknames = new HashSet<string>();
         private IDictionary<long, string> _oldMessageIDsToBodies = new Dictionary<long, string>();
-        private IDictionary<string, UserIDAndNickname> _lowercaseUsernamesToUserIDNamePairs = new Dictionary<string, UserIDAndNickname>();
+        private readonly IDictionary<string, UserIDAndNickname> _lowercaseUsernamesToUserIDNamePairs = new Dictionary<string, UserIDAndNickname>();
         private IDictionary<string, string> _forumSmileyCodesToURLs = new Dictionary<string, string>();
         private IDictionary<string, string> _forumSmileyURLsToCodes = new Dictionary<string, string>();
-        private IDictionary<string, string> _customSmileyCodesToURLs = new Dictionary<string, string>();
-        private IDictionary<string, string> _customSmileyURLsToCodes = new Dictionary<string, string>();
+        private readonly IDictionary<string, string> _customSmileyCodesToURLs = new Dictionary<string, string>();
+        private readonly IDictionary<string, string> _customSmileyURLsToCodes = new Dictionary<string, string>();
         private bool _initialSalvo = true;
         private string _securityToken = null;
         private long _lastMessageReceived = -1;
@@ -73,7 +72,7 @@ namespace VBCBBot
             foreach (var linkElement in element.SelectNodes(".//a[@href]"))
             {
                 var href = linkElement.GetAttributeValue("href", null);
-                var pieceIndex = href.IndexOf(urlPiece);
+                var pieceIndex = href.IndexOf(urlPiece, StringComparison.InvariantCulture);
                 if (pieceIndex >= 0)
                 {
                     return long.Parse(href.Substring(pieceIndex + urlPiece.Length));
@@ -177,11 +176,13 @@ namespace VBCBBot
             DSTUrl = new Uri(ForumConfig.Url, "profile.php?do=dst");
 
             // prepare the reading thread
-            //_readingThread = new Thread(PerformReading);
-            _readingThread.Name = "ChatboxConnector reading";
+            _readingThread = new Thread(PerformReading)
+            {
+                Name = "ChatboxConnector reading"
+            };
         }
 
-        private IDictionary<string, string> _smileyCodesToURLs
+        private IDictionary<string, string> SmileyCodesToURLs
         {
             get
             {
@@ -198,7 +199,7 @@ namespace VBCBBot
             }
         }
 
-        private IDictionary<string, string> _smileyURLsToCodes
+        private IDictionary<string, string> SmileyURLsToCodes
         {
             get
             {
@@ -217,8 +218,14 @@ namespace VBCBBot
 
         public void Start()
         {
+            _stopReading = false;
             Login();
             _readingThread.Start();
+        }
+
+        public void Stop()
+        {
+            _stopReading = true;
         }
 
         /// <summary>
@@ -261,10 +268,8 @@ namespace VBCBBot
         /// </summary>
         protected void FetchSecurityToken()
         {
-            string cheapPageString;
-
             Logger.Info("fetching new security token");
-            cheapPageString = WebGetPage(CheapPageUrl);
+            var cheapPageString = WebGetPage(CheapPageUrl);
 
             var cheapPage = new HtmlDocument();
             cheapPage.LoadHtml(cheapPageString);
@@ -278,10 +283,8 @@ namespace VBCBBot
         /// </summary>
         protected void UpdateSmilies()
         {
-            string smiliesPageString;
-
             Logger.Info("updating smilies");
-            smiliesPageString = WebGetPage(SmiliesUrl);
+            var smiliesPageString = WebGetPage(SmiliesUrl);
 
             var smiliesPage = new HtmlDocument();
             smiliesPage.LoadHtml(smiliesPageString);
@@ -307,7 +310,7 @@ namespace VBCBBot
             _forumSmileyURLsToCodes = urlToCode;
 
             // update this one too (to the combination)
-            Decompiler.SmileyUrlToSymbol = _smileyURLsToCodes;
+            Decompiler.SmileyUrlToSymbol = SmileyURLsToCodes;
         }
 
         /// <summary>
@@ -333,7 +336,7 @@ namespace VBCBBot
                         // URL-encode
                         foreach (var b in ServerEncoding.GetBytes(ps))
                         {
-                            ret.AppendFormat("%{X2}", (int)b);
+                            ret.AppendFormat("%{0:X2}", (int)b);
                         }
                     }
                     catch (EncoderFallbackException)
@@ -355,11 +358,9 @@ namespace VBCBBot
             var smiliesByLength = _forumSmileyCodesToURLs.Keys.ToList();
             smiliesByLength.Sort((r, l) => {
                 var lc = l.Length.CompareTo(r.Length);
-                if (lc != 0)
-                {
-                    return lc;
-                }
-                return l.CompareTo(r);
+                return (lc != 0)
+                    ? lc
+                    : string.Compare(l, r, StringComparison.InvariantCulture);
             });
 
             foreach (var smiley in smiliesByLength)
@@ -383,8 +384,9 @@ namespace VBCBBot
                 {
                     FetchSecurityToken();
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Logger.Warn("fetching security token", ex);
                 }
             }
             else if (retryCount == 1)
@@ -393,8 +395,9 @@ namespace VBCBBot
                 {
                     Login();
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Logger.Warn("logging in", ex);
                 }
             }
             else
@@ -418,8 +421,9 @@ namespace VBCBBot
                 {
                     FetchSecurityToken();
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Logger.Warn("fetching security token", ex);
                 }
             }
             else if (retryCount == 1)
@@ -428,8 +432,9 @@ namespace VBCBBot
                 {
                     Login();
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Logger.Warn("logging in", ex);
                 }
             }
             else
@@ -474,7 +479,7 @@ namespace VBCBBot
             var fail = false;
             try
             {
-                WebPostForm(AjaxUrl, postValues);
+                response = WebPostForm(AjaxUrl, postValues);
             }
             catch (WebException)
             {
@@ -652,7 +657,7 @@ namespace VBCBBot
                 var messageID = FishOutID(metaTd, MessageIDPiece);
                 var userID = FishOutID(metaTd, UserIDPiece);
 
-                if (!messageID.HasValue)
+                if (!messageID.HasValue || !userID.HasValue)
                 {
                     // bah, humbug
                     continue;
@@ -881,8 +886,7 @@ namespace VBCBBot
             Logger.Debug("checking for DST update");
 
             // fetch a (computationally cheap) page from the server
-            string cheapPageString;
-            cheapPageString = WebGetPage(CheapPageUrl);
+            string cheapPageString = WebGetPage(CheapPageUrl);
 
             // load it
             var cheapPage = new HtmlDocument();
@@ -912,8 +916,9 @@ namespace VBCBBot
 
             var forumOffset = firstValue.Value + secondValue.Value;
             var localOffset = TimeZone.CurrentTimeZone.GetUtcOffset(DateTime.Now).TotalHours;
+            var offsetDifference = Math.Abs(forumOffset - localOffset);
 
-            if (Math.Abs(forumOffset - localOffset) != 1)
+            if (Math.Abs(offsetDifference - 1) < 0.01)
             {
                 // DST hasn't changed
                 Logger.Info("DST already correct");
