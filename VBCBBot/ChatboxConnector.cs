@@ -2,10 +2,13 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Xml;
 using Fizzler.Systems.HtmlAgilityPack;
 using HtmlAgilityPack;
 using log4net;
@@ -18,7 +21,9 @@ namespace VBCBBot
         public static readonly ISet<char> UrlSafeChars = new HashSet<char>("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.");
         public static readonly Regex TimestampPattern = new Regex("[[]([0-9][0-9]-[0-9][0-9]-[0-9][0-9], [0-9][0-9]:[0-9][0-9])[]]");
         public static readonly Regex XmlCharEscapePattern = new Regex("[&][#]([0-9]+|x[0-9a-fA-F]+)[;]");
-        public static readonly Regex DstSettingPattern = new Regex("var tzOffset = ([0-9]+) [+] ([0-9]+)[;]");
+        public static readonly Regex DSTSettingPattern = new Regex("var tzOffset = ([0-9]+) [+] ([0-9]+)[;]");
+
+        public event EventHandler<MessageUpdatedEventArgs> MessageUpdated;
 
         public Config.ForumConfig ForumConfig;
         public HtmlDecompiler Decompiler;
@@ -36,7 +41,7 @@ namespace VBCBBot
         public Uri MessagesUrl;
         public Uri SmiliesUrl;
         public Uri AjaxUrl;
-        public Uri DstUrl;
+        public Uri DSTUrl;
 
         private object _cookieJarLid = new object();
         private CookieWebClient _webClient = new CookieWebClient();
@@ -45,17 +50,17 @@ namespace VBCBBot
         private ISet<string> _bannedNicknames = new HashSet<string>();
         //private ISet<IChatboxSubscriber> _subscribers = new HashSet<IChatboxSubscriber>();
         private IDictionary<long, string> _oldMessageIDsToBodies = new Dictionary<long, string>();
-        private IDictionary<string, Tuple<long, string>> _lowercaseUsernamesToUserIDNamePairs = new Dictionary<string, Tuple<long, string>>();
+        private IDictionary<string, UserIDAndNickname> _lowercaseUsernamesToUserIDNamePairs = new Dictionary<string, UserIDAndNickname>();
         private IDictionary<string, string> _forumSmileyCodesToURLs = new Dictionary<string, string>();
         private IDictionary<string, string> _forumSmileyURLsToCodes = new Dictionary<string, string>();
         private IDictionary<string, string> _customSmileyCodesToURLs = new Dictionary<string, string>();
         private IDictionary<string, string> _customSmileyURLsToCodes = new Dictionary<string, string>();
         private bool _initialSalvo = true;
         private string _securityToken = null;
-        private long _lastMessageReleased = -1;
-        private bool _stopReading = false;
+        private long _lastMessageReceived = -1;
+        private volatile bool _stopReading = false;
         private DateTime? _stfuDeadline = null;
-        private short _lastDSTUpdateHourUTC = -1;
+        private int _lastDSTUpdateHourUTC = -1;
 
         /// <summary>
         /// Fishes out an ID following the URL piece from a link containing a given URL piece.
@@ -117,47 +122,6 @@ namespace VBCBBot
         }
 
         /// <summary>
-        /// Converts a string into Unicode code points, handling surrogate pairs gracefully.
-        /// </summary>
-        /// <returns>The code points.</returns>
-        /// <param name="str">The string to convert to code points.</param>
-        public IEnumerable<string> StringToCodePointStrings(string str)
-        {
-            char precedingLeadSurrogate = (char)0;
-            bool awaitingTrailSurrogate = false;
-
-            foreach (char c in str)
-            {
-                if (awaitingTrailSurrogate)
-                {
-                    if (c >= 0xDC00 && c <= 0xDFFF)
-                    {
-                        // SMP code point
-                        yield return new string(new [] { precedingLeadSurrogate, c });
-                    }
-                    else
-                    {
-                        // lead surrogate without trail surrogate
-                        // return both independently
-                        yield return precedingLeadSurrogate.ToString();
-                        yield return c.ToString();
-                    }
-                    
-                    awaitingTrailSurrogate = false;
-                }
-                else if (c >= 0xD800 && c <= 0xDBFF)
-                {
-                    precedingLeadSurrogate = c;
-                    awaitingTrailSurrogate = true;
-                }
-                else
-                {
-                    yield return c.ToString();
-                }
-            }
-        }
-
-        /// <summary>
         /// Encode the string in the escape method used by vB AJAX.
         /// </summary>
         /// <returns>The string escaped correctly for vB AJAX.</returns>
@@ -210,7 +174,7 @@ namespace VBCBBot
             MessagesUrl = new Uri(ForumConfig.Url, "misc.php?do=ccbmessages");
             SmiliesUrl = new Uri(ForumConfig.Url, "misc.php?do=showsmilies");
             AjaxUrl = new Uri(ForumConfig.Url, "ajax.php");
-            DstUrl = new Uri(ForumConfig.Url, "profile.php?do=dst");
+            DSTUrl = new Uri(ForumConfig.Url, "profile.php?do=dst");
 
             // prepare the reading thread
             //_readingThread = new Thread(PerformReading);
@@ -280,7 +244,7 @@ namespace VBCBBot
                 _webClient.ClearCookieJar();
 
                 // log in
-                _webClient.UploadValues(LoginUrl, postValues);
+                WebPostForm(LoginUrl, postValues);
             }
 
             // fetch the security token too
@@ -300,11 +264,7 @@ namespace VBCBBot
             string cheapPageString;
 
             Logger.Info("fetching new security token");
-            lock (_cookieJarLid)
-            {
-                var cheapPageData = _webClient.DownloadData(CheapPageUrl);
-                cheapPageString = ServerEncoding.GetString(cheapPageData);
-            }
+            cheapPageString = WebGetPage(CheapPageUrl);
 
             var cheapPage = new HtmlDocument();
             cheapPage.LoadHtml(cheapPageString);
@@ -321,11 +281,7 @@ namespace VBCBBot
             string smiliesPageString;
 
             Logger.Info("updating smilies");
-            lock (_cookieJarLid)
-            {
-                var smiliesPageData = _webClient.DownloadData(SmiliesUrl);
-                smiliesPageString = ServerEncoding.GetString(smiliesPageData);
-            }
+            smiliesPageString = WebGetPage(SmiliesUrl);
 
             var smiliesPage = new HtmlDocument();
             smiliesPage.LoadHtml(smiliesPageString);
@@ -362,7 +318,7 @@ namespace VBCBBot
         protected string EncodeOutgoingMessage(string outgoingMessage)
         {
             var ret = new StringBuilder();
-            foreach (string ps in StringToCodePointStrings(outgoingMessage))
+            foreach (string ps in Util.StringToCodePointStrings(outgoingMessage))
             {
                 if (ps.Length == 1 && UrlSafeChars.Contains(ps[0]))
                 {
@@ -449,11 +405,566 @@ namespace VBCBBot
             actionToRetry.Invoke();
         }
 
+        /// <summary>
+        /// Renews some information and tries invoking a function again.
+        /// </summary>
+        /// <param name="retryCount">How many times have we retried already?</param>
+        /// <param name="functionToRetry">The function to retry.</param>
+        protected T RetryFunc<T>(int retryCount, Func<T> functionToRetry)
+        {
+            if (retryCount == 0)
+            {
+                try
+                {
+                    FetchSecurityToken();
+                }
+                catch
+                {
+                }
+            }
+            else if (retryCount == 1)
+            {
+                try
+                {
+                    Login();
+                }
+                catch
+                {
+                }
+            }
+            else
+            {
+                throw new TransferException();
+            }
+
+            return functionToRetry.Invoke();
+        }
+
         protected bool ShouldSTFU
         {
             get
             {
                 return _stfuDeadline.HasValue && DateTime.Now < _stfuDeadline.Value;
+            }
+        }
+
+        /// <summary>
+        /// Perform an AJAX request.
+        /// </summary>
+        /// <returns>The result XML DOM.</returns>
+        /// <param name="operation">The name of the operation to perform.</param>
+        /// <param name="parameters">The parameters to supply.</param>
+        /// <param name="retry">How many times this operation has been tried already.</param>
+        public XmlDocument Ajax(string operation, IDictionary<string, string> parameters = null, int retry = 0)
+        {
+            var postValues = new NameValueCollection
+            {
+                { "securitytoken", _securityToken },
+                { "do", operation }
+            };
+            if (parameters != null)
+            {
+                foreach (var pair in parameters)
+                {
+                    postValues[pair.Key] = pair.Value;
+                }
+            }
+
+            byte[] response = null;
+            var fail = false;
+            try
+            {
+                WebPostForm(AjaxUrl, postValues);
+            }
+            catch (WebException)
+            {
+                fail = true;
+            }
+
+            if (fail || response.Length == 0)
+            {
+                // something failed
+                return RetryFunc(retry, () => Ajax(operation, parameters, retry + 1));
+            }
+
+            try
+            {
+                var doc = new XmlDocument();
+                doc.Load(new MemoryStream(response));
+                return doc;
+            }
+            catch (XmlException ex)
+            {
+                Logger.Warn("AJAX response parse", ex);
+                return RetryFunc(retry, () => Ajax(operation, parameters, retry + 1));
+            }
+        }
+
+        /// <summary>
+        /// Send the given emssage to the server.
+        /// </summary>
+        /// <param name="message">The message to send.</param>
+        /// <param name="bypassStfu">Should an active STFU period be bypassed?</param>
+        /// <param name="bypassFilters">Should filters be bypassed?</param>
+        /// <param name="customSmileys">Should custom smileys be substituted?</param>
+        /// <param name="retry">Level of desperation to post the new message.</param>
+        public void SendMessage(string message, bool bypassStfu = false, bool bypassFilters = false, bool customSmileys = false, int retry = 0)
+        {
+            if (!bypassStfu && ShouldSTFU)
+            {
+                Logger.DebugFormat("I've been shut up; not posting message {0}", Util.LiteralString(message));
+                return;
+            }
+
+            if (customSmileys)
+            {
+                message = SubstituteCustomSmilies(message);
+            }
+
+            if (!bypassFilters)
+            {
+                message = FilterCombiningMarkClusters(message);
+            }
+
+            Logger.DebugFormat("posting message {0} (retry {1})", Util.LiteralString(message), retry);
+            var requestString = string.Format(
+                "do=cb_postnew&securitytoken={0}&vsacb_newmessage={1}",
+                _securityToken, EncodeOutgoingMessage(message)
+            );
+
+            byte[] postResponse;
+            try
+            {
+                postResponse = WebPostFormData(PostEditUrl, requestString);
+            }
+            catch (WebException ex)
+            {
+                Logger.Warn("sending message", ex);
+                // don't send the message -- fixing this might take longer
+                return;
+            }
+
+            if (postResponse.Length != 0)
+            {
+                Retry(retry, () => SendMessage(message, bypassStfu, bypassFilters, customSmileys, retry + 1));
+                return;
+            }
+        }
+
+        /// <summary>
+        /// Edits a previously posted chatbox message.
+        /// </summary>
+        /// <param name="messageID">The ID of the message to modify.</param>
+        /// <param name="message">The new body of the message.</param>
+        /// <param name="bypassStfu">Should an active STFU period be bypassed?</param>
+        /// <param name="bypassFilters">Should filters be bypassed?</param>
+        /// <param name="customSmileys">Should custom smileys be substituted?</param>
+        /// <param name="retry">Level of desperation to post the new message.</param>
+        public void EditMessage(long messageID, string message, bool bypassStfu = true, bool bypassFilters = false, bool customSmileys = false, int retry = 0)
+        {
+            if (!bypassStfu && ShouldSTFU)
+            {
+                Logger.DebugFormat("I've been shut up; not editing message {0} to {1}", messageID, Util.LiteralString(message));
+                return;
+            }
+
+            if (customSmileys)
+            {
+                message = SubstituteCustomSmilies(message);
+            }
+
+            if (!bypassFilters)
+            {
+                message = FilterCombiningMarkClusters(message);
+            }
+
+            Logger.DebugFormat("editing message {0} to {1} (retry {2})", messageID, Util.LiteralString(message), retry);
+            var requestString = string.Format(
+                "do=vsacb_editmessage&s=&securitytoken={0}&id={1}&vsacb_editmessage={2}",
+                _securityToken, messageID, EncodeOutgoingMessage(message)
+            );
+
+            byte[] editResponse;
+            try
+            {
+                editResponse = WebPostFormData(PostEditUrl, requestString);
+            }
+            catch (WebException ex)
+            {
+                Logger.Warn("editing message", ex);
+                // don't edit the message -- fixing this might take longer
+                return;
+            }
+
+            if (editResponse.Length != 0)
+            {
+                Retry(retry, () => EditMessage(messageID, message, bypassStfu, bypassFilters, customSmileys, retry + 1));
+                return;
+            }
+        }
+
+        /// <summary>
+        /// Fetches new messages from the chatbox.
+        /// </summary>
+        /// <param name="retry">Level of desperation fetching the new messages.</param>
+        protected void FetchNewMessages(int retry = 0)
+        {
+            byte[] messagesResponse;
+            try
+            {
+                messagesResponse = WebGetPageBytes(MessagesUrl);
+            }
+            catch (WebException ex)
+            {
+                Logger.WarnFormat("fetching new messages failed, retry {0}\n{1}", retry, ex);
+
+                // try harder
+                Retry(retry, () => FetchNewMessages(retry + 1));
+                return;
+            }
+
+            var messages = new HtmlDocument();
+            messages.Load(new MemoryStream(messagesResponse));
+
+            var allTrs = messages.DocumentNode.SelectNodes("/tr");
+            if (allTrs.Count == 0)
+            {
+                // aw crap
+                Retry(retry, () => FetchNewMessages(retry + 1));
+                return;
+            }
+
+            var newLastMessage = _lastMessageReceived;
+            var visibleMessageIDs = new HashSet<long>();
+            var newAndEditedMessages = new Stack<MessageToDistribute>();
+
+            // for each message
+            foreach (var tr in allTrs)
+            {
+                // pick out the TDs
+                var tds = tr.SelectNodes("./td");
+
+                // pick out the first (metadata)
+                var metaTd = tds[0];
+                var bodyTd = tds[1];
+
+                // find the link to the message and to the user
+                var messageID = FishOutID(metaTd, MessageIDPiece);
+                var userID = FishOutID(metaTd, UserIDPiece);
+
+                if (!messageID.HasValue)
+                {
+                    // bah, humbug
+                    continue;
+                }
+
+                if (newLastMessage < messageID.Value)
+                {
+                    newLastMessage = messageID.Value;
+                }
+
+                visibleMessageIDs.Add(messageID.Value);
+
+                // fetch the timestamp
+                var timestamp = DateTime.Now;
+                var timestampMatch = TimestampPattern.Match(metaTd.InnerHtml);
+                if (timestampMatch.Success)
+                {
+                    var timeString = timestampMatch.Groups[1].Value;
+                    DateTime parsed;
+                    if (DateTime.TryParseExact(
+                        timeString,
+                        "dd-MM-yy, HH:mm",
+                        CultureInfo.InvariantCulture,
+                        DateTimeStyles.AssumeLocal,
+                        out parsed
+                    ))
+                    {
+                        timestamp = parsed;
+                    }
+                }
+
+                // get the nickname
+                HtmlNode nickElement = null;
+                foreach (var linkElement in metaTd.SelectNodes(".//a[@href]"))
+                {
+                    if (linkElement.GetAttributeValue("href", null).Contains(UserIDPiece))
+                    {
+                        nickElement = linkElement;
+                    }
+                }
+
+                if (nickElement == null)
+                {
+                    // bah, humbug
+                    continue;
+                }
+
+                var nick = nickElement.InnerText;
+
+                var isBanned = _bannedNicknames.Contains(nick.ToLowerInvariant());
+
+                // cache the nickname
+                _lowercaseUsernamesToUserIDNamePairs[nick.ToLowerInvariant()] = new UserIDAndNickname(userID.Value, nick);
+
+                var message = new ChatboxMessage(
+                    messageID.Value,
+                    userID.Value,
+                    nickElement,
+                    bodyTd,
+                    timestamp,
+                    Decompiler
+                );
+
+                var body = bodyTd.InnerHtml;
+                if (_oldMessageIDsToBodies.ContainsKey(messageID.Value))
+                {
+                    var oldBody = _oldMessageIDsToBodies[messageID.Value];
+                    if (oldBody != body)
+                    {
+                        _oldMessageIDsToBodies[messageID.Value] = body;
+                        newAndEditedMessages.Push(new MessageToDistribute(_initialSalvo, true, isBanned, message));
+                    }
+                }
+                else
+                {
+                    newAndEditedMessages.Push(new MessageToDistribute(_initialSalvo, false, isBanned, message));
+                }
+            }
+
+            // port the bodies of messages that are still visible
+            var messageIDsToBodies = new Dictionary<long, string>();
+            foreach (var pair in _oldMessageIDsToBodies)
+            {
+                if (visibleMessageIDs.Contains(pair.Key))
+                {
+                    messageIDsToBodies[pair.Key] = pair.Value;
+                }
+            }
+            _oldMessageIDsToBodies = messageIDsToBodies;
+
+            // distribute the news and modifications
+            while (newAndEditedMessages.Count > 0)
+            {
+                var msg = newAndEditedMessages.Pop();
+                OnMessageUpdated(new MessageUpdatedEventArgs { Message = msg });
+            }
+
+            _initialSalvo = false;
+            _lastMessageReceived = newLastMessage;
+        }
+
+        protected virtual void OnMessageUpdated(MessageUpdatedEventArgs e)
+        {
+            var handler = MessageUpdated;
+            if (handler != null)
+            {
+                handler(this, e);
+            }
+        }
+
+        /// <summary>
+        /// Processes incoming messages.
+        /// </summary>
+        protected void PerformReading()
+        {
+            int penaltyCoefficient = 1;
+            while (!_stopReading)
+            {
+                try
+                {
+                    FetchNewMessages();
+                    penaltyCoefficient = 1;
+                }
+                catch (Exception ex)
+                {
+                    Logger.WarnFormat("exception fetching messages; penalty coefficient is {0}\n{1}", penaltyCoefficient, ex);
+                }
+                try
+                {
+                    PotentialDSTFix();
+                }
+                catch (Exception ex)
+                {
+                    Logger.WarnFormat("potential DST fix failed\n{0}", ex);
+                }
+
+                ++penaltyCoefficient;
+                    Thread.Sleep(TimeSpan.FromSeconds(TimeBetweenReads * penaltyCoefficient));
+            }
+        }
+
+        /// <summary>
+        /// Returns the user ID of the user with the given name.
+        /// </summary>
+        /// <returns>The user ID of the user with the given name, or -1 if the user does not exist.</returns>
+        /// <param name="username">The username to search for.</param>
+        public long UserIDForName(string username)
+        {
+            var result = UserIDAndNicknameForUncasedName(username);
+            if (result.HasValue)
+            {
+                return result.Value.UserID;
+            }
+            return -1;
+        }
+
+        /// <summary>
+        /// Returns the user ID and real nickname of the user with the given case-insensitive name.
+        /// </summary>
+        /// <returns>The information about the user with the given name, or null if the username does not exist.</returns>
+        /// <param name="username">The username to search for.</param>
+        public UserIDAndNickname? UserIDAndNicknameForUncasedName(string username)
+        {
+            var lowerUsername = username.ToLowerInvariant();
+            if (_lowercaseUsernamesToUserIDNamePairs.ContainsKey(lowerUsername))
+            {
+                return _lowercaseUsernamesToUserIDNamePairs[lowerUsername];
+            }
+
+            if (username.Length < 3)
+            {
+                // vB doesn't allow usernames shorter than three characters
+                return null;
+            }
+
+            var result = Ajax("usersearch", new Dictionary<string, string> {{ "fragment", username }});
+            foreach (XmlNode child in result.SelectNodes("./user[@userid]"))
+            {
+                var userID = long.Parse(child.Attributes["userid"].Value);
+                var usernameText = child.InnerText;
+
+                if (lowerUsername == usernameText.ToLowerInvariant())
+                {
+                    var info = new UserIDAndNickname(userID, usernameText);
+
+                    // cache!
+                    _lowercaseUsernamesToUserIDNamePairs[lowerUsername] = info;
+                    return info;
+                }
+            }
+
+            return null;
+        }
+
+        public string SubstituteCustomSmilies(string message)
+        {
+            var ret = new StringBuilder(message);
+            foreach (var smiley in _customSmileyCodesToURLs)
+            {
+                ret.Replace(smiley.Key, string.Format("[icon]{0}[/icon]", smiley.Value));
+            }
+            return ret.ToString();
+        }
+
+        /// <summary>
+        /// Update Daylight Savings Time settings if necessary (to make the forum shut up).
+        /// </summary>
+        public void PotentialDSTFix()
+        {
+            var utcNow = DateTime.UtcNow;
+            if (_lastDSTUpdateHourUTC == utcNow.Hour)
+            {
+                // we already checked this hour
+                return;
+            }
+
+            if (utcNow.Minute < DSTUpdateMinute)
+            {
+                // too early to check
+                return;
+            }
+
+            // update hour to this one
+            _lastDSTUpdateHourUTC = utcNow.Hour;
+
+            Logger.Debug("checking for DST update");
+
+            // fetch a (computationally cheap) page from the server
+            string cheapPageString;
+            cheapPageString = WebGetPage(CheapPageUrl);
+
+            // load it
+            var cheapPage = new HtmlDocument();
+            cheapPage.LoadHtml(cheapPageString);
+            var dstForm = cheapPage.DocumentNode.SelectSingleNode(".//form[@name='dstform']");
+            if (dstForm == null)
+            {
+                return;
+            }
+
+            Logger.Info("performing DST update");
+
+            // find the forum's DST settings (they're hidden in JavaScript)
+            int? firstValue = null, secondValue = null;
+            foreach (Match match in DSTSettingPattern.Matches(cheapPageString))
+            {
+                firstValue = int.Parse(match.Groups[1].Value);
+                secondValue = int.Parse(match.Groups[2].Value);
+                break;
+            }
+
+            if (!firstValue.HasValue || !secondValue.HasValue)
+            {
+                Logger.Error("can't perform DST update: timezone calculation not found");
+                return;
+            }
+
+            var forumOffset = firstValue.Value + secondValue.Value;
+            var localOffset = TimeZone.CurrentTimeZone.GetUtcOffset(DateTime.Now).TotalHours;
+
+            if (Math.Abs(forumOffset - localOffset) != 1)
+            {
+                // DST hasn't changed
+                Logger.Info("DST already correct");
+                return;
+            }
+
+            // fish out all the necessary fields
+            var postFields = new NameValueCollection
+            {
+                {"s", dstForm.SelectSingleNode(".//input[@name='s']").GetAttributeValue("value", null)},
+                {"securitytoken", dstForm.SelectSingleNode(".//input[@name='securitytoken']").GetAttributeValue("value", null)},
+                {"do", "dst"}
+            };
+
+            // call the update page
+            WebPostForm(DSTUrl, postFields);
+
+            Logger.Info("DST updated");
+        }
+
+        protected byte[] WebPostForm(Uri url, NameValueCollection postValues)
+        {
+            lock (_cookieJarLid)
+            {
+                _webClient.Headers["Content-Type"] = "application/x-www-form-urlencoded";
+                _webClient.Timeout = Timeout;
+                return _webClient.UploadValues(url, "POST", postValues);
+            }
+        }
+
+        protected byte[] WebPostFormData(Uri url, string formData)
+        {
+            lock (_cookieJarLid)
+            {
+                _webClient.Headers["Content-Type"] = "application/x-www-form-urlencoded";
+                _webClient.Timeout = Timeout;
+                return _webClient.UploadData(url, "POST", ServerEncoding.GetBytes(formData));
+            }
+        }
+
+        protected string WebGetPage(Uri url)
+        {
+            return ServerEncoding.GetString(WebGetPageBytes(url));
+        }
+
+        protected byte[] WebGetPageBytes(Uri url)
+        {
+            lock (_cookieJarLid)
+            {
+                _webClient.Timeout = Timeout;
+                return _webClient.DownloadData(url);
             }
         }
     }
