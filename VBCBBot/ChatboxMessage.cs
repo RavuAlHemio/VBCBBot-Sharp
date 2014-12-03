@@ -66,7 +66,7 @@ namespace VBCBBot
         }
 
         /// <summary>
-        /// The username of the user who posted this message.
+        /// The body text of this message.
         /// </summary>
         public string Body
         {
@@ -74,7 +74,7 @@ namespace VBCBBot
         }
 
         /// <summary>
-        /// The BBCode DOM representation of the username of the user who posted this message.
+        /// The BBCode DOM representation of the body of this message.
         /// </summary>
         public BBCodeDom.Node[] BodyDom
         {
@@ -85,7 +85,7 @@ namespace VBCBBot
         }
 
         /// <summary>
-        /// The BBCode representation of the username of the user who posted this message.
+        /// The BBCode representation of the body of this message.
         /// </summary>
         public string BodyBBCode
         {
