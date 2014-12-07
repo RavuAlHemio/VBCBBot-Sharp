@@ -20,7 +20,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VBCBBotService", "VBCBBotSe
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Modules", "Modules", "{6869BF2C-A06E-49B3-8A20-A95B862F8E64}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Messenger", "Messenger\Messenger.csproj", "{20F2234D-A1E3-450E-9E88-4AC8293918CA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Messenger", "Modules\Messenger\Messenger.csproj", "{20F2234D-A1E3-450E-9E88-4AC8293918CA}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BinAdmin", "Modules\BinAdmin\BinAdmin.csproj", "{4CAF6857-5FA9-4289-86E6-D1B807568A8C}"
 EndProject
@@ -63,7 +63,7 @@ Global
 		{4CAF6857-5FA9-4289-86E6-D1B807568A8C} = {6869BF2C-A06E-49B3-8A20-A95B862F8E64}
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
-		StartupItem = VBCBBot\VBCBBot.csproj
+		StartupItem = VBCBBotCLI\VBCBBotCLI.csproj
 		Policies = $0
 		$0.TextStylePolicy = $1
 		$1.inheritsSet = VisualStudio

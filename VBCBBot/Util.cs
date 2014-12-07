@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Entity.Core.EntityClient;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -119,6 +120,14 @@ namespace VBCBBot
             }
             ret.Append('"');
             return ret.ToString();
+        }
+
+        public static string EntityConnectionString(IDatabaseModuleConfig config)
+        {
+            var csb = new EntityConnectionStringBuilder();
+            csb.Provider = config.DatabaseProvider;
+            csb.ProviderConnectionString = config.DatabaseConnectionString;
+            return csb.ToString();
         }
     }
 }

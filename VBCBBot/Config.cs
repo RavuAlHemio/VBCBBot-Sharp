@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace VBCBBot
 {
@@ -56,9 +57,21 @@ namespace VBCBBot
             public Dictionary<string, string> SmileyUrlToSymbol;
         }
 
+        [JsonObject]
+        public class ModuleConfig
+        {
+            public string Assembly { get; set; }
+            public string ModuleClass { get; set; }
+            public JObject Config { get; set; }
+        }
+
+        public ForumConfig Forum;
+        public HtmlDecompilerConfig HtmlDecompiler;
+        public List<ModuleConfig> Modules;
+
         public Config(string configString)
         {
-            // TODO: write me
+            JsonConvert.PopulateObject(configString, this);
         }
     }
 }

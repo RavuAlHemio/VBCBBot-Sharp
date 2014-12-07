@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Globalization;
+using System.Linq;
 using System.Text.RegularExpressions;
-using VBCBBot;
 using log4net;
+using Newtonsoft.Json.Linq;
+using VBCBBot;
 
 namespace BinAdmin
 {
@@ -32,11 +35,12 @@ namespace BinAdmin
             "$" // end of the line
         );
 
-        private ISet<string> BinBanned;
+        private BinAdminConfig _config;
 
-        public BinAdmin(ChatboxConnector connector)
+        public BinAdmin(ChatboxConnector connector, JObject cfg)
             : base(connector)
         {
+            _config = new BinAdminConfig(cfg);
         }
 
         protected override void ProcessUpdatedMessage(ChatboxMessage message, bool isPartOfInitialSalvo = false, bool isEdited = false, bool isBanned = false)
@@ -47,19 +51,105 @@ namespace BinAdmin
                 return;
             }
 
-            if (isBanned || BinBanned.Contains(message.UserName))
+            if (isBanned || _config.Banned.Contains(message.UserName))
             {
                 return;
             }
 
             var body = message.BodyBBCode;
 
-            if (body.StartsWith("!", StringComparison.InvariantCulture))
+            if (!body.StartsWith("!", StringComparison.InvariantCulture))
             {
-                // bot trigger; ignore
-                return;
+                // not a bot trigger; process a possible toss
+                HandlePossibleToss(message, body);
             }
+            else if (body == "!tonnen")
+            {
+                Logger.DebugFormat("bin overview request from {0}", message.UserName);
 
+                using (var context = new BinAdminContext(_config.ContextString))
+                {
+                    var bins = context.Bins.Select(b => b.BinName).ToList();
+
+                    if (bins.Count == 0)
+                    {
+                        Connector.SendMessage("Ich kenne keine Tonnen.");
+                    }
+                    else if (bins.Count == 1)
+                    {
+                        Connector.SendMessage("Ich kenne folgende Tonne: " + bins[0]);
+                    }
+                    else
+                    {
+                        bins.Sort();
+                        var names = string.Join(", ", bins);
+                        Connector.SendMessage("Ich kenne folgende Tonnen: " + names);
+                    }
+                }
+            }
+            else if (body.StartsWith("!tonneninhalt "))
+            {
+                var binName = body.Substring(("!tonneninhalt ").Length);
+                Logger.DebugFormat("bin {0} contents request from {1}", binName, message.UserName);
+
+                using (var context = new BinAdminContext(_config.ContextString))
+                {
+                    var bin = context.Bins.Find(binName);
+                    if (bin == null)
+                    {
+                        Connector.SendMessage("Diese Tonne kenne ich nicht.");
+                        return;
+                    }
+
+                    var items = context.BinItems.Where(i => i.Bin.BinName == binName).Select(i => i.Item).ToList();
+                    if (items.Count == 0)
+                    {
+                        Connector.SendMessage("In dieser Tonne befindet sich nichts.");
+                    }
+                    else if (items.Count == 1)
+                    {
+                        Connector.SendMessage("In dieser Tonne befindet sich: " + items[0]);
+                    }
+                    else
+                    {
+                        items.Sort();
+                        var itemString = string.Join(", ", items);
+                        Connector.SendMessage("In dieser Tonne befinden sich: " + itemString);
+                    }
+                }
+            }
+            else if (body.StartsWith("!entleere "))
+            {
+                var binName = body.Substring(("!entleere ").Length);
+                Logger.DebugFormat("bin {0} emptying request from {1}", binName, message.UserName);
+
+                using (var context = new BinAdminContext(_config.ContextString))
+                {
+                    var bin = context.Bins.Find(binName);
+                    if (bin == null)
+                    {
+                        Connector.SendMessage("Diese Tonne kenne ich nicht.");
+                        return;
+                    }
+
+                    bin.Items.Clear();
+                    context.SaveChanges();
+                }
+            }
+            else if (body == "!m\u00fcllabfuhr")
+            {
+                Logger.DebugFormat("bin removal request from {0}", message.UserName);
+                using (var context = new BinAdminContext(_config.ContextString))
+                {
+                    context.DeleteAll<Bin>();
+                    context.SaveChanges();
+                }
+                Connector.SendMessage("Tonnen abgesammelt.");
+            }
+        }
+
+        protected void HandlePossibleToss(ChatboxMessage message, string body)
+        {
             var match = ArrowWasteBinRegex.Match(body);
             if (!match.Success)
             {
@@ -80,13 +170,42 @@ namespace BinAdmin
                 return;
             }
 
-            var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+            var timestamp = DateTime.Now;
 
             Logger.DebugFormat(
                 "{0} tossed {1} into {2} using {3}",
                 message.UserName, Util.LiteralString(what), Util.LiteralString(where), Util.LiteralString(arrow)
             );
+
+            using (var context = new BinAdminContext(_config.ContextString))
+            {
+                var bin = context.Bins.Find(where);
+                if (bin == null)
+                {
+                    // add the bin
+                    bin = new Bin
+                    {
+                        BinName = where
+                    };
+                    context.Bins.Add(bin);
+                    context.SaveChanges();
+                }
+
+                var item = context.BinItems.Find(where, what);
+                if (item == null)
+                {
+                    item = new BinItem
+                    {
+                        Bin = bin,
+                        Thrower = message.UserName,
+                        Arrow = arrow,
+                        Item = what,
+                        Timestamp = timestamp
+                    };
+                    context.BinItems.Add(item);
+                    context.SaveChanges();
+                }
+            }
         }
     }
 }
-
