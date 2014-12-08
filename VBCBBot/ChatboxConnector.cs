@@ -58,8 +58,9 @@ namespace VBCBBot
         private string _securityToken = null;
         private long _lastMessageReceived = -1;
         private volatile bool _stopReading = false;
-        private DateTime? _stfuDeadline = null;
         private int _lastDSTUpdateHourUTC = -1;
+
+        public DateTime? StfuDeadline = null;
 
         /// <summary>
         /// Fishes out an ID following the URL piece from a link containing a given URL piece.
@@ -449,7 +450,7 @@ namespace VBCBBot
         {
             get
             {
-                return _stfuDeadline.HasValue && DateTime.Now < _stfuDeadline.Value;
+                return StfuDeadline.HasValue && DateTime.Now < StfuDeadline.Value;
             }
         }
 
