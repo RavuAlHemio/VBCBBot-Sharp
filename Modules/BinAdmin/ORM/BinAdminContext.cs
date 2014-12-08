@@ -2,7 +2,7 @@
 using System.Data.Common;
 using System.Data.Entity;
 
-namespace BinAdmin
+namespace BinAdmin.ORM
 {
     public class BinAdminContext : DbContext
     {

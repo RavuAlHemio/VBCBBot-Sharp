@@ -4,6 +4,7 @@ using System.Data.Common;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
+using BinAdmin.ORM;
 using log4net;
 using Newtonsoft.Json.Linq;
 using VBCBBot;

@@ -2,9 +2,9 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace BinAdmin
+namespace BinAdmin.ORM
 {
-    [Table("bin_items")]
+    [Table("bin_items", Schema = "bin_admin")]
     public class BinItem
     {
         [Key]

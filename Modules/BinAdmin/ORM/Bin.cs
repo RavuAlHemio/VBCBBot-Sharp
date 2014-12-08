@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace BinAdmin
+namespace BinAdmin.ORM
 {
-    [Table("bins")]
+    [Table("bins", Schema = "bin_admin")]
     public class Bin
     {
         [Key]
