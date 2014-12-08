@@ -54,7 +54,7 @@ namespace IsTuwelDown
             }
 
             var body = message.BodyBBCode;
-            if (IsDownRegex.Match(body) == null)
+            if (!IsDownRegex.Match(body).Success)
             {
                 return;
             }
