@@ -17,12 +17,14 @@ namespace VBCBBotCLI
             var repo = (Hierarchy)LogManager.GetRepository();
             repo.Root.Level = Level.Debug;
             repo.Configured = true;
+            var layout = new PatternLayout
+            {
+                ConversionPattern = "%-6timestamp [%15.15thread] %-5level %30.30logger %ndc - %message%newline"
+            };
+            layout.ActivateOptions();
             var conApp = new ConsoleAppender
             {
-                Layout = new PatternLayout
-                {
-                    ConversionPattern = "%-6timestamp [%15.15thread] %-5level %30.30logger %ndc - %message%newline"
-                }
+                Layout = layout
             };
             conApp.ActivateOptions();
             repo.Root.AddAppender(conApp);

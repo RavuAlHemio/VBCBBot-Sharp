@@ -42,8 +42,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="App.config" />
     <None Include="packages.config" />
+    <None Include="Configurations\SQLite.config" />
+    <None Include="Configurations\Postgresql.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\VBCBBot\VBCBBot.csproj">
@@ -59,4 +60,7 @@
   <Target Name="AfterBuild">
   </Target>
   -->
+  <ItemGroup>
+    <Folder Include="Configurations\" />
+  </ItemGroup>
 </Project>
