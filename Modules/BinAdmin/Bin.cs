@@ -9,7 +9,12 @@ namespace BinAdmin
     public class Bin
     {
         [Key]
-        [Column("bin")]
+        [Column("bin_id")]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public long Id { get; set; }
+
+        [Column("bin_name")]
+        [MaxLength]
         public string BinName { get; set; }
 
         public ICollection<BinItem> Items { get; set; }

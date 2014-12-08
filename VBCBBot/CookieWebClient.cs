@@ -28,9 +28,11 @@ namespace VBCBBot
             }
 
             req.Timeout = Timeout;
-            if (req is HttpWebRequest)
+            var httpReq = req as HttpWebRequest;
+            if (httpReq != null)
             {
-                ((HttpWebRequest)req).CookieContainer = CookieJar;
+                httpReq.CookieContainer = CookieJar;
+                httpReq.KeepAlive = false;
             }
             return req;
         }

@@ -15,7 +15,6 @@ namespace VBCBBot
             public string Password;
             public List<string> BannedUsers;
             public double RefreshTime;
-            public string TeXPrefix;
 
             [JsonProperty("Url")]
             public string UrlString
@@ -55,6 +54,7 @@ namespace VBCBBot
         public class HtmlDecompilerConfig
         {
             public Dictionary<string, string> SmileyUrlToSymbol;
+            public string TeXPrefix;
         }
 
         [JsonObject]

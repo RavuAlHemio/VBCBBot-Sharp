@@ -53,6 +53,26 @@ namespace VBCBBot
             return ret.ToArray();
         }
 
+        public static void TrimOuterTextNodes(IList<BBCodeDom.Node> nodeList)
+        {
+            if (nodeList.Count > 0)
+            {
+                var tn = nodeList[0] as BBCodeDom.TextNode;
+                if (tn != null)
+                {
+                    nodeList[0] = new BBCodeDom.TextNode(tn.Text.TrimStart());
+                }
+
+                var last = nodeList.Count - 1;
+                var ln = nodeList[last] as BBCodeDom.TextNode;
+                if (ln != null)
+                {
+                    nodeList[last] = new BBCodeDom.TextNode(ln.Text.TrimEnd());
+                }
+            }
+
+        }
+
         public static BBCodeDom.Node[] IntercalateTextAndMatchesAsElement(Regex regex, string str, string elementTag = "noparse")
         {
             var ret = new List<BBCodeDom.Node>();
@@ -355,12 +375,14 @@ namespace VBCBBot
                 else if (childNode.NodeType == HtmlNodeType.Text)
                 {
                     // put evil stuff (opening brackets and smiley triggers) into noparse tags
-                    var escapedChildren = IntercalateTextAndMatchesAsElement(RegexForNoparse, childNode.InnerText, "noparse");
+                    var escapedChildren = IntercalateTextAndMatchesAsElement(RegexForNoparse, HtmlEntity.DeEntitize(childNode.InnerText), "noparse");
                     ret.AddRange(escapedChildren);
                 }
             }
 
-            return JoinAdjacentTextNodes(ret);
+            var trimmedRet = JoinAdjacentTextNodes(ret);
+            TrimOuterTextNodes(trimmedRet);
+            return trimmedRet;
         }
     }
 }

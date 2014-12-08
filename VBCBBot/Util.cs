@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.Entity.Core.EntityClient;
+using System.Configuration;
+using System.Data;
+using System.Data.Common;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 
@@ -122,12 +125,11 @@ namespace VBCBBot
             return ret.ToString();
         }
 
-        public static string EntityConnectionString(IDatabaseModuleConfig config)
+        public static DbConnection GetDatabaseConnection(IDatabaseModuleConfig config)
         {
-            var csb = new EntityConnectionStringBuilder();
-            csb.Provider = config.DatabaseProvider;
-            csb.ProviderConnectionString = config.DatabaseConnectionString;
-            return csb.ToString();
+            var conn = DbProviderFactories.GetFactory(config.DatabaseProvider).CreateConnection();
+            conn.ConnectionString = config.DatabaseConnectionString;
+            return conn;
         }
     }
 }

@@ -43,8 +43,20 @@ namespace BinAdmin
             _config = new BinAdminConfig(cfg);
         }
 
+        private BinAdminContext GetNewContext()
+        {
+            var conn = Util.GetDatabaseConnection(_config);
+            return new BinAdminContext(conn);
+        }
+
         protected override void ProcessUpdatedMessage(ChatboxMessage message, bool isPartOfInitialSalvo = false, bool isEdited = false, bool isBanned = false)
         {
+            if (isEdited)
+            {
+                // don't react to edited messages
+                return;
+            }
+
             if (message.UserName.Equals(Connector.ForumConfig.Username, StringComparison.InvariantCulture))
             {
                 // the bot itself may not throw things into the bin
@@ -63,11 +75,15 @@ namespace BinAdmin
                 // not a bot trigger; process a possible toss
                 HandlePossibleToss(message, body);
             }
+            else if (isPartOfInitialSalvo)
+            {
+                // don't process commands that are part of the initial salvo
+            }
             else if (body == "!tonnen")
             {
                 Logger.DebugFormat("bin overview request from {0}", message.UserName);
 
-                using (var context = new BinAdminContext(_config.ContextString))
+                using (var context = GetNewContext())
                 {
                     var bins = context.Bins.Select(b => b.BinName).ToList();
 
@@ -77,12 +93,12 @@ namespace BinAdmin
                     }
                     else if (bins.Count == 1)
                     {
-                        Connector.SendMessage("Ich kenne folgende Tonne: " + bins[0]);
+                        Connector.SendMessage("Ich kenne folgende Tonne: '" + bins[0] + "'");
                     }
                     else
                     {
                         bins.Sort();
-                        var names = string.Join(", ", bins);
+                        var names = string.Join(", ", bins.Select(x => "'" + x + "'"));
                         Connector.SendMessage("Ich kenne folgende Tonnen: " + names);
                     }
                 }
@@ -92,7 +108,7 @@ namespace BinAdmin
                 var binName = body.Substring(("!tonneninhalt ").Length);
                 Logger.DebugFormat("bin {0} contents request from {1}", binName, message.UserName);
 
-                using (var context = new BinAdminContext(_config.ContextString))
+                using (var context = GetNewContext())
                 {
                     var bin = context.Bins.Find(binName);
                     if (bin == null)
@@ -123,7 +139,7 @@ namespace BinAdmin
                 var binName = body.Substring(("!entleere ").Length);
                 Logger.DebugFormat("bin {0} emptying request from {1}", binName, message.UserName);
 
-                using (var context = new BinAdminContext(_config.ContextString))
+                using (var context = GetNewContext())
                 {
                     var bin = context.Bins.Find(binName);
                     if (bin == null)
@@ -139,7 +155,7 @@ namespace BinAdmin
             else if (body == "!m\u00fcllabfuhr")
             {
                 Logger.DebugFormat("bin removal request from {0}", message.UserName);
-                using (var context = new BinAdminContext(_config.ContextString))
+                using (var context = GetNewContext())
                 {
                     context.DeleteAll<Bin>();
                     context.SaveChanges();
@@ -177,9 +193,9 @@ namespace BinAdmin
                 message.UserName, Util.LiteralString(what), Util.LiteralString(where), Util.LiteralString(arrow)
             );
 
-            using (var context = new BinAdminContext(_config.ContextString))
+            using (var context = GetNewContext())
             {
-                var bin = context.Bins.Find(where);
+                var bin = context.Bins.Where(x => x.BinName == where).FirstOrDefault();
                 if (bin == null)
                 {
                     // add the bin
@@ -191,7 +207,7 @@ namespace BinAdmin
                     context.SaveChanges();
                 }
 
-                var item = context.BinItems.Find(where, what);
+                var item = context.BinItems.Where(x => x.Bin.BinName == where && x.Item == what).FirstOrDefault();
                 if (item == null)
                 {
                     item = new BinItem

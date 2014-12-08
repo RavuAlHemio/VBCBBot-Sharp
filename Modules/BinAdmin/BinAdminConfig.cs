@@ -15,17 +15,10 @@ namespace BinAdmin
 
         public BinAdminConfig(JObject obj)
         {
+            Banned = new HashSet<string>();
+
             var ser = new JsonSerializer();
             ser.Populate(obj.CreateReader(), this);
-        }
-
-        [JsonIgnore]
-        public string ContextString
-        {
-            get
-            {
-                return Util.EntityConnectionString(this);
-            }
         }
     }
 }

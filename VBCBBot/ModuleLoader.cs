@@ -33,16 +33,18 @@ namespace VBCBBot
 
                 // find the right constructor
                 var ctor = cls.GetConstructor(
-                    BindingFlags.Public,
+                    BindingFlags.Public | BindingFlags.Instance,
                     null,
                     new [] {typeof(ChatboxConnector), typeof(JObject)},
                     null
                 );
-                if (cls == null)
+                if (ctor == null)
                 {
                     Logger.ErrorFormat("module {0}: failed to find correct constructor", moduleConfig.ModuleClass);
                     continue;
                 }
+
+                Logger.DebugFormat("loading module {0}...", moduleConfig.ModuleClass);
 
                 // invoke it
                 var moduleObject = ctor.Invoke(new object[] {connector, moduleConfig.Config});

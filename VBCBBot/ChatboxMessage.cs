@@ -70,7 +70,7 @@ namespace VBCBBot
         /// </summary>
         public string Body
         {
-            get { return _cachedBody ?? (_cachedBody = BodyNode.InnerText); }
+            get { return _cachedBody ?? (_cachedBody = BodyNode.InnerText.Trim()); }
         }
 
         /// <summary>
@@ -91,9 +91,8 @@ namespace VBCBBot
         {
             get
             {
-                return string.Join("", BodyDom.Select(x => x.ToString()));
+                return string.Join("", BodyDom.Select(x => x.BBCodeString));
             }
         }
     }
 }
-

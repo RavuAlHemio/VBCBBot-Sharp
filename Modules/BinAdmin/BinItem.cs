@@ -8,18 +8,26 @@ namespace BinAdmin
     public class BinItem
     {
         [Key]
-        [ForeignKey("BinName")]
-        [Column("bin")]
-        public Bin Bin { get; set; }
+        [Column("bin_item_id")]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public long Id { get; set; }
 
-        [Key]
+        [Column("bin_id")]
+        public long BinId { get; set; }
+
+        [ForeignKey("BinId")]
+        public virtual Bin Bin { get; set; }
+
         [Column("item")]
+        [MaxLength]
         public string Item { get; set; }
 
         [Column("arrow")]
+        [MaxLength]
         public string Arrow { get; set; }
 
         [Column("thrower")]
+        [MaxLength]
         public string Thrower { get; set; }
 
         [Column("timestamp")]

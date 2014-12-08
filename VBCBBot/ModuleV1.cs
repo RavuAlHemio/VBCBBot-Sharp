@@ -1,4 +1,5 @@
 ﻿using System;
+using log4net;
 
 namespace VBCBBot
 {
@@ -7,6 +8,8 @@ namespace VBCBBot
     /// </summary>
     public abstract class ModuleV1 : IDisposable
     {
+        private static readonly ILog Logger = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
         /// <summary>
         /// The chatbox connector relevant to this instance of the module.
         /// </summary>
@@ -14,12 +17,20 @@ namespace VBCBBot
 
         public ModuleV1(ChatboxConnector connector)
         {
+            Connector = connector;
             Connector.MessageUpdated += MessageUpdated;
         }
 
         private void MessageUpdated(object sender, MessageUpdatedEventArgs e)
         {
-            ProcessUpdatedMessage(e.Message.Message, e.Message.IsPartOfInitialSalvo, e.Message.IsEdited, e.Message.IsBanned);
+            try
+            {
+                ProcessUpdatedMessage(e.Message.Message, e.Message.IsPartOfInitialSalvo, e.Message.IsEdited, e.Message.IsBanned);
+            }
+            catch (Exception exc)
+            {
+                Logger.ErrorFormat("module {0} failed to process updated message:\n{1}", this.GetType().Name, exc);
+            }
         }
 
         protected abstract void ProcessUpdatedMessage(ChatboxMessage message, bool isPartOfInitialSalvo = false, bool isEdited = false, bool isBanned = false);

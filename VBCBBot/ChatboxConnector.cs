@@ -153,7 +153,7 @@ namespace VBCBBot
         /// <param name="forumConfig">Forum configuration.</param>
         /// <param name="decompiler">A correctly configured HTML decompiler, or null.</param>
         /// <param name="timeout">The timeout for HTTP connections.</param>
-        public ChatboxConnector(Config.ForumConfig forumConfig, HtmlDecompiler decompiler = null, int timeout = 30)
+        public ChatboxConnector(Config.ForumConfig forumConfig, HtmlDecompiler decompiler = null, int timeout = 10000)
         {
             ForumConfig = forumConfig;
             Decompiler = decompiler;
@@ -170,7 +170,7 @@ namespace VBCBBot
             LoginUrl = new Uri(ForumConfig.Url, "login.php?do=login");
             CheapPageUrl = new Uri(ForumConfig.Url, "faq.php");
             PostEditUrl = new Uri(ForumConfig.Url, "misc.php");
-            MessagesUrl = new Uri(ForumConfig.Url, "misc.php?do=ccbmessages");
+            MessagesUrl = new Uri(ForumConfig.Url, "misc.php?show=ccbmessages");
             SmiliesUrl = new Uri(ForumConfig.Url, "misc.php?do=showsmilies");
             AjaxUrl = new Uri(ForumConfig.Url, "ajax.php");
             DSTUrl = new Uri(ForumConfig.Url, "profile.php?do=dst");
@@ -614,10 +614,10 @@ namespace VBCBBot
         /// <param name="retry">Level of desperation fetching the new messages.</param>
         protected void FetchNewMessages(int retry = 0)
         {
-            byte[] messagesResponse;
+            string messagesResponse;
             try
             {
-                messagesResponse = WebGetPageBytes(MessagesUrl);
+                messagesResponse = WebGetPage(MessagesUrl);
             }
             catch (WebException ex)
             {
@@ -629,7 +629,7 @@ namespace VBCBBot
             }
 
             var messages = new HtmlDocument();
-            messages.Load(new MemoryStream(messagesResponse));
+            messages.LoadHtml(messagesResponse);
 
             var allTrs = messages.DocumentNode.SelectNodes("/tr");
             if (allTrs.Count == 0)
@@ -733,6 +733,7 @@ namespace VBCBBot
                 }
                 else
                 {
+                    _oldMessageIDsToBodies[messageID.Value] = body;
                     newAndEditedMessages.Push(new MessageToDistribute(_initialSalvo, false, isBanned, message));
                 }
             }
