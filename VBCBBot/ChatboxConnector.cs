@@ -631,6 +631,12 @@ namespace VBCBBot
 
             var messages = new HtmlDocument();
             messages.LoadHtml(messagesResponse);
+            if (messages.DocumentNode == null)
+            {
+                // dang
+                Retry(retry, () => FetchNewMessages(retry + 1));
+                return;
+            }
 
             var allTrs = messages.DocumentNode.SelectNodes("/tr");
             if (allTrs.Count == 0)
