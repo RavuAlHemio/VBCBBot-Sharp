@@ -18,25 +18,13 @@ namespace IsTuwelDown
 
         private TuwelDownConfig _config;
 
-        public static string FormatDateTime(DateTime dt)
+        public static string FormatDateTime(DateTime? dt)
         {
-            return dt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
-        }
-
-        public static string UnixTimestampStringToLocalTimeString(string unixTimestampString)
-        {
-            // try parsing timestamp
-            double unixTime;
-            if (!double.TryParse(unixTimestampString, out unixTime))
+            if (!dt.HasValue)
             {
                 return "???";
             }
-
-            // calculate date/time
-            var unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, 0, CultureInfo.InvariantCulture.Calendar, DateTimeKind.Utc);
-            var myTimeUTC = unixEpoch.AddSeconds(unixTime);
-            var myTimeLocal = myTimeUTC.ToLocalTime();
-            return FormatDateTime(myTimeLocal);
+            return dt.Value.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
         }
 
         public static string PickRandom(IList<string> list)
@@ -80,8 +68,8 @@ namespace IsTuwelDown
             var sinceTimeString = pieces[1];
             var lastUpdateTimeString = pieces[2];
 
-            var since = UnixTimestampStringToLocalTimeString(sinceTimeString);
-            var lastUpdate = UnixTimestampStringToLocalTimeString(lastUpdateTimeString);
+            var since = FormatDateTime(Util.UnixTimestampStringToLocalDateTime(sinceTimeString));
+            var lastUpdate = FormatDateTime(Util.UnixTimestampStringToLocalDateTime(lastUpdateTimeString));
 
             IList<string> pickOne = _config.UnknownMessages;
             if (status == "0")

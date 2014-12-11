@@ -18,7 +18,6 @@ namespace VBCBBot
     public class ChatboxConnector
     {
         private static readonly ILog Logger = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-        public static readonly ISet<char> UrlSafeChars = new HashSet<char>("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.");
         public static readonly Regex TimestampPattern = new Regex("[[]([0-9][0-9]-[0-9][0-9]-[0-9][0-9], [0-9][0-9]:[0-9][0-9])[]]");
         public static readonly Regex XmlCharEscapePattern = new Regex("[&][#]([0-9]+|x[0-9a-fA-F]+)[;]");
         public static readonly Regex DSTSettingPattern = new Regex("var tzOffset = ([0-9]+) [+] ([0-9]+)[;]");
@@ -131,7 +130,7 @@ namespace VBCBBot
             var ret = new StringBuilder();
             foreach (char c in str)
             {
-                if (UrlSafeChars.Contains(c))
+                if (Util.UrlSafeChars.Contains(c))
                 {
                     ret.Append(c);
                 }
@@ -321,34 +320,7 @@ namespace VBCBBot
         /// <param name="outgoingMessage">The message that will be sent.</param>
         protected string EncodeOutgoingMessage(string outgoingMessage)
         {
-            var ret = new StringBuilder();
-            foreach (string ps in Util.StringToCodePointStrings(outgoingMessage))
-            {
-                if (ps.Length == 1 && UrlSafeChars.Contains(ps[0]))
-                {
-                    // URL-safe character
-                    ret.Append(ps[0]);
-                }
-                else
-                {
-                    // character in the server's encoding?
-                    try
-                    {
-                        // URL-encode
-                        foreach (var b in ServerEncoding.GetBytes(ps))
-                        {
-                            ret.AppendFormat("%{0:X2}", (int)b);
-                        }
-                    }
-                    catch (EncoderFallbackException)
-                    {
-                        // unsupported natively by the encoding; perform a URL-encoded HTML escape
-                        ret.AppendFormat("%26%23{0}%3B", Char.ConvertToUtf32(ps, 0));
-                    }
-                }
-            }
-
-            return ret.ToString();
+            return Util.UrlEncode(outgoingMessage, ServerEncoding);
         }
 
         public string EscapeOutogingText(string text)

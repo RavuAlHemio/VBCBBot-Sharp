@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Data.Common;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -12,6 +13,9 @@ namespace VBCBBot
 {
     public static class Util
     {
+        public static readonly ISet<char> UrlSafeChars = new HashSet<char>("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.");
+        public static readonly Encoding Utf8NoBom = new UTF8Encoding(false, true);
+
         public static string ProgramDirectory
         {
             get
@@ -130,6 +134,96 @@ namespace VBCBBot
             var conn = DbProviderFactories.GetFactory(config.DatabaseProvider).CreateConnection();
             conn.ConnectionString = config.DatabaseConnectionString;
             return conn;
+        }
+
+        /// <summary>
+        /// URL-encodes the string.
+        /// </summary>
+        /// <returns>The URL-encoded string.</returns>
+        /// <param name="data">The string to URL-encode.</param>
+        /// <param name="charset">The charset being used.</param>
+        /// <param name="spaceAsPlus">If true, encodes spaces (U+0020) as pluses (U+002B).
+        /// If false, encodes spaces as the hex escape "%20".</param>
+        public static string UrlEncode(string data, Encoding charset, bool spaceAsPlus = false)
+        {
+            var ret = new StringBuilder();
+            foreach (string ps in StringToCodePointStrings(data))
+            {
+                if (ps.Length == 1 && UrlSafeChars.Contains(ps[0]))
+                {
+                    // URL-safe character
+                    ret.Append(ps[0]);
+                }
+                else if (spaceAsPlus && ps.Length == 1 && ps[0] == ' ')
+                {
+                    ret.Append('+');
+                }
+                else
+                {
+                    // character in the server's encoding?
+                    try
+                    {
+                        // URL-encode
+                        foreach (var b in charset.GetBytes(ps))
+                        {
+                            ret.AppendFormat("%{0:X2}", (int)b);
+                        }
+                    }
+                    catch (EncoderFallbackException)
+                    {
+                        // unsupported natively by the encoding; perform a URL-encoded HTML escape
+                        ret.AppendFormat("%26%23{0}%3B", Char.ConvertToUtf32(ps, 0));
+                    }
+                }
+            }
+
+            return ret.ToString();
+        }
+
+        public static DateTime? UnixTimestampStringToLocalDateTime(string unixTimestampString)
+        {
+            // try parsing timestamp
+            double? unixTime = Util.MaybeParseDouble(unixTimestampString);
+            if (!unixTime.HasValue)
+            {
+                return null;
+            }
+
+            // calculate date/time
+            var unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, 0, CultureInfo.InvariantCulture.Calendar, DateTimeKind.Utc);
+            var myTimeUTC = unixEpoch.AddSeconds(unixTime.Value);
+            var myTimeLocal = myTimeUTC.ToLocalTime();
+            return myTimeLocal;
+        }
+
+        public static int? MaybeParseInt(string str)
+        {
+            int ret;
+            if (int.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture, out ret))
+            {
+                return ret;
+            }
+            return null;
+        }
+
+        public static long? MaybeParseLong(string str)
+        {
+            long ret;
+            if (long.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture, out ret))
+            {
+                return ret;
+            }
+            return null;
+        }
+
+        public static double? MaybeParseDouble(string str)
+        {
+            double ret;
+            if (double.TryParse(str, NumberStyles.Float, CultureInfo.InvariantCulture, out ret))
+            {
+                return ret;
+            }
+            return null;
         }
     }
 }
