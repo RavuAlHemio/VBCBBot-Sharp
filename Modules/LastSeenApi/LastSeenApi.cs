@@ -39,6 +39,11 @@ namespace LastSeenApi
 
         protected override void ProcessUpdatedMessage(ChatboxMessage message, bool isPartOfInitialSalvo = false, bool isEdited = false, bool isBanned = false)
         {
+            if (isPartOfInitialSalvo || isEdited || isBanned)
+            {
+                return;
+            }
+
             var body = message.BodyBBCode;
             var match = SeenRegex.Match(body);
             if (!match.Success)
