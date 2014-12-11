@@ -68,6 +68,7 @@ namespace LastSeenApi
                 if (response == "NULL")
                 {
                     nicknamesInfos[nickname] = null;
+                    continue;
                 }
                 var pieces = response.Split(' ');
                 if (pieces.Length != 3)
