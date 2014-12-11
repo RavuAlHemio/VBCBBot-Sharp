@@ -933,10 +933,17 @@ namespace VBCBBot
                 return;
             }
 
+            var sNode = dstForm.SelectSingleNode(".//input[@name='s']");
+            if (sNode == null)
+            {
+                Logger.Error("can't perform DST update: input \"s\" not found");
+                return;
+            }
+
             // fish out all the necessary fields
             var postFields = new NameValueCollection
             {
-                {"s", dstForm.SelectSingleNode(".//input[@name='s']").GetAttributeValue("value", null)},
+                {"s", sNode.GetAttributeValue("value", null)},
                 {"securitytoken", dstForm.SelectSingleNode(".//input[@name='securitytoken']").GetAttributeValue("value", null)},
                 {"do", "dst"}
             };
