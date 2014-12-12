@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
-using System.Data;
 using System.Data.Common;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Text;
+using HtmlAgilityPack;
 
 namespace VBCBBot
 {
@@ -225,6 +223,10 @@ namespace VBCBBot
             }
             return null;
         }
+
+        public static HtmlNodeCollection SelectNodesOrEmpty(this HtmlNode node, string xpath)
+        {
+            return node.SelectNodes(xpath) ?? new HtmlNodeCollection(node);
+        }
     }
 }
-

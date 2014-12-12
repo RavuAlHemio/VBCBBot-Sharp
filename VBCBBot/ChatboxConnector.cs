@@ -69,7 +69,7 @@ namespace VBCBBot
         /// <returns>The ID fished out of the message.</returns>
         public static long? FishOutID(HtmlNode element, string urlPiece)
         {
-            foreach (var linkElement in element.SelectNodes(".//a[@href]"))
+            foreach (var linkElement in element.SelectNodesOrEmpty(".//a[@href]"))
             {
                 var href = linkElement.GetAttributeValue("href", null);
                 var pieceIndex = href.IndexOf(urlPiece, StringComparison.InvariantCulture);
@@ -610,7 +610,7 @@ namespace VBCBBot
                 return;
             }
 
-            var allTrs = messages.DocumentNode.SelectNodes("/tr");
+            var allTrs = messages.DocumentNode.SelectNodesOrEmpty("/tr");
             if (allTrs.Count == 0)
             {
                 // aw crap
@@ -626,7 +626,11 @@ namespace VBCBBot
             foreach (var tr in allTrs)
             {
                 // pick out the TDs
-                var tds = tr.SelectNodes("./td");
+                var tds = tr.SelectNodesOrEmpty("./td");
+                if (tds.Count != 2)
+                {
+                    continue;
+                }
 
                 // pick out the first (metadata)
                 var metaTd = tds[0];
@@ -670,7 +674,7 @@ namespace VBCBBot
 
                 // get the nickname
                 HtmlNode nickElement = null;
-                foreach (var linkElement in metaTd.SelectNodes(".//a[@href]"))
+                foreach (var linkElement in metaTd.SelectNodesOrEmpty(".//a[@href]"))
                 {
                     if (linkElement.GetAttributeValue("href", null).Contains(UserIDPiece))
                     {
