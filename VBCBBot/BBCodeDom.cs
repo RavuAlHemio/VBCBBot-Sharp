@@ -31,6 +31,14 @@ namespace VBCBBot
             }
 
             /// <summary>
+            /// The children of this node.
+            /// </summary>
+            public virtual Node[] Children
+            {
+                get { return null; }
+            }
+
+            /// <summary>
             /// Whether this node has children.
             /// </summary>
             public virtual bool HasChildren
@@ -65,7 +73,7 @@ namespace VBCBBot
                 InternalChildren = (Node[])children.Clone();
             }
 
-            public Node[] Children
+            public override Node[] Children
             {
                 get { return (Node[])InternalChildren.Clone(); }
             }

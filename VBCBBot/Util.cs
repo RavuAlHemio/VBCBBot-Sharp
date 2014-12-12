@@ -228,5 +228,22 @@ namespace VBCBBot
         {
             return node.SelectNodes(xpath) ?? new HtmlNodeCollection(node);
         }
+
+        /// <summary>
+        /// Removes [noparse] tags from the string repeatedly until a fixed point is reached.
+        /// </summary>
+        /// <param name="str">The string from which to remove [noparse] tags.</param>
+        /// <returns>The string without [noparse] tags.</returns>
+        public static string ExpungeNoparse(string str)
+        {
+            string previous = null;
+            var changeMe = new StringBuilder(str);
+            while (previous != changeMe.ToString())
+            {
+                previous = changeMe.ToString();
+                changeMe.Replace("[noparse]", "").Replace("[/noparse]", "");
+            }
+            return changeMe.ToString();
+        }
     }
 }
