@@ -147,6 +147,13 @@ namespace VBCBBot
             return ret.ToString();
         }
 
+        static ChatboxConnector()
+        {
+            // form overlapping support: form's children become siblings
+            // get rid of this behavior
+            HtmlNode.ElementsFlags.Remove("form");
+        }
+
         /// <summary>
         /// Connect to a vBulletin chatbox.
         /// </summary>
