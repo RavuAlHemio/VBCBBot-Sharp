@@ -32,7 +32,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GroupPressure", "Modules\Gr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LastSeenApi", "Modules\LastSeenApi\LastSeenApi.csproj", "{29B1BF38-6CF2-40EE-8A22-D6C14449FAC5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LinkInfo", "LinkInfo\LinkInfo.csproj", "{EC158179-FD43-442C-BCE3-FF46BA002A89}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LinkInfo", "Modules\LinkInfo\LinkInfo.csproj", "{EC158179-FD43-442C-BCE3-FF46BA002A89}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
