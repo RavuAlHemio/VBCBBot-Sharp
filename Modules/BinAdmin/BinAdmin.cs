@@ -111,7 +111,7 @@ namespace BinAdmin
 
                 using (var context = GetNewContext())
                 {
-                    var bin = context.Bins.Find(binName);
+                    var bin = context.Bins.FirstOrDefault(b => b.BinName == binName);
                     if (bin == null)
                     {
                         Connector.SendMessage("Diese Tonne kenne ich nicht.");
@@ -142,7 +142,7 @@ namespace BinAdmin
 
                 using (var context = GetNewContext())
                 {
-                    var bin = context.Bins.Find(binName);
+                    var bin = context.Bins.FirstOrDefault(b => b.BinName == binName);
                     if (bin == null)
                     {
                         Connector.SendMessage("Diese Tonne kenne ich nicht.");
