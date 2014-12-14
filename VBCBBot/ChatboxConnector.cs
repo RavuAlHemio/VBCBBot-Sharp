@@ -696,7 +696,7 @@ namespace VBCBBot
 
                 var nick = nickElement.InnerText;
 
-                var isBanned = ForumConfig.BannedUsers.Contains(nick.ToLowerInvariant());
+                var isBanned = ForumConfig.LowercaseBannedUsers.Contains(nick.ToLowerInvariant());
 
                 // cache the nickname
                 _lowercaseUsernamesToUserIDNamePairs[nick.ToLowerInvariant()] = new UserIDAndNickname(userID.Value, nick);

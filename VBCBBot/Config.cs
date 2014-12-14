@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -13,7 +14,6 @@ namespace VBCBBot
         {
             public string Username;
             public string Password;
-            public HashSet<string> BannedUsers;
             public double RefreshTime;
 
             [JsonProperty("Url")]
@@ -29,6 +29,22 @@ namespace VBCBBot
                 }
             }
 
+            [JsonIgnore]
+            public HashSet<string> LowercaseBannedUsers;
+
+            [JsonIgnore]
+            private HashSet<string> _bannedUsers;
+
+            public HashSet<string> BannedUsers
+            {
+                get { return _bannedUsers; }
+                set
+                {
+                    _bannedUsers = value;
+                    LowercaseBannedUsers = new HashSet<string>(_bannedUsers.Select(u => u.ToLowerInvariant()));
+                }
+            }
+            
             [JsonIgnore]
             public Uri Url;
 
