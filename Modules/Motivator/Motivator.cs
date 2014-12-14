@@ -38,7 +38,7 @@ namespace Motivator
                 return;
             }
 
-            var body = message.BodyBBCode;
+            var body = message.BodyBBCode.ToLowerInvariant();
             foreach (var verbCategories in _config.VerbsCategoriesMotivators)
             {
                 var verbMeUsing = string.Format("!{0} me using ", verbCategories.Key);
