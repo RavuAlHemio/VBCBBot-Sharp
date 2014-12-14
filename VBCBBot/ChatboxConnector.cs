@@ -46,7 +46,6 @@ namespace VBCBBot
         private readonly CookieWebClient _webClient = new CookieWebClient();
         private readonly Thread _readingThread;
 
-        private readonly ISet<string> _bannedNicknames = new HashSet<string>();
         private IDictionary<long, string> _oldMessageIDsToBodies = new Dictionary<long, string>();
         private readonly IDictionary<string, UserIDAndNickname> _lowercaseUsernamesToUserIDNamePairs = new Dictionary<string, UserIDAndNickname>();
         private IDictionary<string, string> _forumSmileyCodesToURLs = new Dictionary<string, string>();
@@ -697,7 +696,7 @@ namespace VBCBBot
 
                 var nick = nickElement.InnerText;
 
-                var isBanned = _bannedNicknames.Contains(nick.ToLowerInvariant());
+                var isBanned = ForumConfig.BannedUsers.Contains(nick.ToLowerInvariant());
 
                 // cache the nickname
                 _lowercaseUsernamesToUserIDNamePairs[nick.ToLowerInvariant()] = new UserIDAndNickname(userID.Value, nick);

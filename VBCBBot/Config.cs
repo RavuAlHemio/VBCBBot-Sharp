@@ -13,7 +13,7 @@ namespace VBCBBot
         {
             public string Username;
             public string Password;
-            public List<string> BannedUsers;
+            public HashSet<string> BannedUsers;
             public double RefreshTime;
 
             [JsonProperty("Url")]
