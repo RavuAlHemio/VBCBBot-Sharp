@@ -158,6 +158,7 @@ namespace BinAdmin
                 Logger.DebugFormat("bin removal request from {0}", message.UserName);
                 using (var context = GetNewContext())
                 {
+                    context.DeleteAll<BinItem>();
                     context.DeleteAll<Bin>();
                     context.SaveChanges();
                 }
