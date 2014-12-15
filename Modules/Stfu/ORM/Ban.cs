@@ -8,12 +8,14 @@ namespace Stfu.ORM
     public class Ban
     {
         [Key]
+        [Required]
         [Column("banned_user")]
         public string BannedUser { get; set; }
 
         [Column("deadline")]
         public DateTime? Deadline { get; set; }
 
+        [Required]
         [Column("banner")]
         public string Banner { get; set; }
     }
