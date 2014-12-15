@@ -45,8 +45,7 @@ namespace Echelon
             long incidentCount;
             using (var ctx = GetNewContext())
             {
-                var triggerIds = ctx.Triggers.Where(t => t.TargetNameLower == targetLower).Select(t => t.Id);
-                incidentCount = ctx.Incidents.Where(i => triggerIds.Contains(i.TriggerId)).LongCount();
+                incidentCount = ctx.Incidents.Where(i => i.PerpetratorName.ToLower() == targetLower).LongCount();
             }
 
             var salutation = _config.Spymasters.Contains(message.UserName) ? "Spymaster" : "Agent";
