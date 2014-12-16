@@ -191,6 +191,8 @@ namespace Thanks
                             ThankeeFolded = teg.FirstOrDefault().ThankeeFolded,
                             ThankCount = teg.Sum(te => te.ThankCount)
                         })
+                        .OrderByDescending(teg => teg.ThankCount)
+                        .Take(_config.MostThankedCount)
                         .ToList()
                     ;
                 }
