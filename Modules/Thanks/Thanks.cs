@@ -183,7 +183,7 @@ namespace Thanks
                     top = ctx.ThanksEntries
                         .GroupBy(te => te.ThankeeFolded)
                         .Select(teg => new ThankeeAndCount {
-                            ThankeeFolded = teg.First().ThankeeFolded,
+                            ThankeeFolded = teg.FirstOrDefault().ThankeeFolded,
                             ThankCount = teg.Sum(te => te.ThankCount)
                         })
                         .ToList()
