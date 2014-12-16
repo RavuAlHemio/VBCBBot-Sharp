@@ -26,6 +26,11 @@ namespace Thanks
 
         protected override void ProcessUpdatedMessage(ChatboxMessage message, bool isPartOfInitialSalvo = false, bool isEdited = false, bool isBanned = false)
         {
+            if (isBanned || isEdited || isPartOfInitialSalvo)
+            {
+                return;
+            }
+
             if (message.UserName == Connector.ForumConfig.Username)
             {
                 return;
