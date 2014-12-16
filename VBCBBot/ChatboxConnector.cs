@@ -824,7 +824,7 @@ namespace VBCBBot
             }
 
             var result = Ajax("usersearch", new Dictionary<string, string> {{ "fragment", username }});
-            foreach (XmlNode child in result.SelectNodes("./user[@userid]"))
+            foreach (XmlNode child in result.SelectNodes("/users/user[@userid]"))
             {
                 var userID = long.Parse(child.Attributes["userid"].Value);
                 var usernameText = child.InnerText;
