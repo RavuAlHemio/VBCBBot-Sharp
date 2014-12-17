@@ -169,7 +169,7 @@ namespace Thanks
                     statsString = string.Format(
                         " (Most grateful{0}: {1})",
                         countString,
-                        string.Join(", ", mostGratefulStrings)
+                        string.Join(", ", mostGratefulStrings.Take(_config.MostGratefulCount))
                     );
                 }
 
