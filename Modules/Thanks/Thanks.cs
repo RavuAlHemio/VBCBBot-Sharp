@@ -159,6 +159,7 @@ namespace Thanks
                             .Where(te => te.ThankeeFolded == lowerNickname)
                             .OrderByDescending(te => te.ThankCount)
                             .Take(_config.MostGratefulCount + 1)
+                            .ToList()
                             .Select(te => string.Format("[noparse]{0}[/noparse]: {1}\u00D7", te.Thanker, te.ThankCount))
                             .ToList();
                     }
