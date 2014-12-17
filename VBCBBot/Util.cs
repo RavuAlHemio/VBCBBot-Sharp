@@ -245,5 +245,19 @@ namespace VBCBBot
             }
             return changeMe.ToString();
         }
+
+        public static string RemoveControlCharactersAndStrip(string text)
+        {
+            var ret = new StringBuilder();
+            foreach (var cp in StringToCodePointStrings(text))
+            {
+                if (char.GetUnicodeCategory(cp, 0) == UnicodeCategory.Control)
+                {
+                    continue;
+                }
+                ret.Append(cp);
+            }
+            return ret.ToString().Trim();
+        }
     }
 }

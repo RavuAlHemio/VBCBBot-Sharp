@@ -31,10 +31,32 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="EntityFramework">
+      <HintPath>..\..\packages\EntityFramework.6.1.1\lib\net45\EntityFramework.dll</HintPath>
+    </Reference>
+    <Reference Include="EntityFramework.SqlServer">
+      <HintPath>..\..\packages\EntityFramework.6.1.1\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="log4net">
+      <HintPath>..\..\packages\log4net.2.0.3\lib\net40-full\log4net.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\..\packages\Newtonsoft.Json.6.0.6\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Class1.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Messenger.cs" />
+    <Compile Include="ORM\AbstractMessage.cs" />
+    <Compile Include="ORM\Message.cs" />
+    <Compile Include="ORM\MessageOnRetainer.cs" />
+    <Compile Include="ORM\ReplayableMessage.cs" />
+    <Compile Include="ORM\IgnoreEntry.cs" />
+    <Compile Include="ORM\MessengerContext.cs" />
+    <Compile Include="MessengerConfig.cs" />
+    <Compile Include="RecipientAndMessage.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
@@ -44,4 +66,17 @@
   <Target Name="AfterBuild">
   </Target>
   -->
+  <ItemGroup>
+    <None Include="App.config" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="ORM\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\VBCBBot\VBCBBot.csproj">
+      <Project>{4AA61B89-443F-433C-9D57-645501E888B7}</Project>
+      <Name>VBCBBot</Name>
+    </ProjectReference>
+  </ItemGroup>
 </Project>
