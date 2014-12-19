@@ -10,6 +10,7 @@ namespace Messenger.ORM
         [Key]
         [Required]
         [Column("message_id", Order = 1)]
+        [DatabaseGenerated(DatabaseGeneratedOption.None)]
         public long ID { get; set; }
 
         [Required]
