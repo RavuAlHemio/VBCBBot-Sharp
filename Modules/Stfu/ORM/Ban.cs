@@ -9,14 +9,14 @@ namespace Stfu.ORM
     {
         [Key]
         [Required]
-        [Column("banned_user")]
+        [Column("banned_user", Order = 1)]
         public string BannedUser { get; set; }
 
-        [Column("deadline")]
+        [Column("deadline", Order = 2)]
         public DateTime? Deadline { get; set; }
 
         [Required]
-        [Column("banner")]
+        [Column("banner", Order = 3)]
         public string Banner { get; set; }
     }
 }
