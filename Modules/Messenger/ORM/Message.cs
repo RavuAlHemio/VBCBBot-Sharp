@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace Messenger.ORM
 {
     [Table("messages", Schema = "messenger")]
-    public class Message : IMessage
+    public class Message
     {
         [Key]
         [Required]
@@ -31,14 +31,5 @@ namespace Messenger.ORM
         [Column("body")]
         [MaxLength]
         public string Body { get; set; }
-
-        public Message()
-        {
-        }
-
-        public Message(IMessage other)
-        {
-            MessageUtils.CopyMessage(other, this);
-        }
     }
 }

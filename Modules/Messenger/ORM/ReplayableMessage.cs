@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace Messenger.ORM
 {
     [Table("replayable_messages", Schema = "messenger")]
-    public class ReplayableMessage : IMessage
+    public class ReplayableMessage
     {
         [Key]
         [Required]
@@ -31,14 +31,5 @@ namespace Messenger.ORM
         [Column("body")]
         [MaxLength]
         public string Body { get; set; }
-
-        public ReplayableMessage()
-        {
-        }
-
-        public ReplayableMessage(IMessage other)
-        {
-            MessageUtils.CopyMessage(other, this);
-        }
     }
 }
