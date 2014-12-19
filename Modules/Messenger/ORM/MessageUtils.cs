@@ -2,26 +2,13 @@
 {
     public static class MessageUtils
     {
-        public static T CopyMessage<T>(object fromMessage, T toMessage)
+        public static void TransferMessage(IMessage fromMessage, IMessage toMessage)
         {
-            var whats = new []
-            {
-                "ID",
-                "Timestamp",
-                "SenderOriginal",
-                "RecipientFolded",
-                "Body"
-            };
-
-            foreach (var what in whats)
-            {
-                var fromProp = fromMessage.GetType().GetProperty(what);
-                var toProp = toMessage.GetType().GetProperty(what);
-
-                toProp.SetValue(toMessage, fromProp.GetValue(fromMessage));
-            }
-
-            return toMessage;
+            toMessage.ID = fromMessage.ID;
+            toMessage.Timestamp = fromMessage.Timestamp;
+            toMessage.SenderOriginal = fromMessage.SenderOriginal;
+            toMessage.RecipientFolded = fromMessage.RecipientFolded;
+            toMessage.Body = fromMessage.Body;
         }
     }
 }
