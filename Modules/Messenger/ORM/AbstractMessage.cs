@@ -9,7 +9,6 @@ namespace Messenger.ORM
         [Key]
         [Required]
         [Column("message_id")]
-        [MaxLength(255)]
         public long ID { get; set; }
 
         [Required]
