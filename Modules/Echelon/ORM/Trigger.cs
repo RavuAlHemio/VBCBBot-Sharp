@@ -15,17 +15,14 @@ namespace Echelon.ORM
         public long Id { get; set; }
 
         [Column("target_name_lower", Order = 2)]
-        [MaxLength(-1)]
         public string TargetNameLower { get; set; }
 
         [Required]
         [Column("regex", Order = 3)]
-        [MaxLength(-1)]
         public string Regex { get; set; }
 
         [Required]
         [Column("spymaster_name", Order = 4)]
-        [MaxLength(-1)]
         public string SpymasterName { get; set; }
 
         public ICollection<Incident> Incidents { get; set; }

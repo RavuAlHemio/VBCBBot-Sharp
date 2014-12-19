@@ -27,7 +27,6 @@ namespace Messenger.ORM
 
         [Required]
         [Column("body", Order = 5)]
-        [MaxLength(-1)]
         public string Body { get; set; }
 
         public AbstractMessage()
