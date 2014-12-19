@@ -22,17 +22,17 @@ namespace BinAdmin.ORM
 
         [Required]
         [Column("item")]
-        [MaxLength]
+        [MaxLength(-1)]
         public string Item { get; set; }
 
         [Required]
         [Column("arrow")]
-        [MaxLength]
+        [MaxLength(-1)]
         public string Arrow { get; set; }
 
         [Required]
         [Column("thrower")]
-        [MaxLength]
+        [MaxLength(-1)]
         public string Thrower { get; set; }
 
         [Required]

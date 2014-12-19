@@ -31,7 +31,7 @@ namespace Echelon.ORM
 
         [Required]
         [Column("perpetrator_name")]
-        [MaxLength]
+        [MaxLength(-1)]
         public string PerpetratorName { get; set; }
     }
 }

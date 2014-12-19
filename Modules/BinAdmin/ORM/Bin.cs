@@ -16,7 +16,7 @@ namespace BinAdmin.ORM
 
         [Required]
         [Column("bin_name")]
-        [MaxLength]
+        [MaxLength(-1)]
         public string BinName { get; set; }
 
         public ICollection<BinItem> Items { get; set; }
