@@ -376,9 +376,9 @@ namespace Messenger
                     .Where(m => m.RecipientFolded == lowerSenderName)
                     .OrderByDescending(m => m.ID)
                     .Take(replayCount)
-                    .Reverse()
                     .ToList()
                 ;
+                messages.Reverse();
             }
 
             if (messages.Count == 0)
