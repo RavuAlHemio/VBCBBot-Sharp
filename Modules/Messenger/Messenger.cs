@@ -625,7 +625,7 @@ namespace Messenger
                 using (var ctx = GetNewContext())
                 {
                     // put messages on retainer
-                    ctx.MessagesOnRetainer.AddRange(messages.Select(m => MessageUtils.CopyMessage(m, new MessageOnRetainer())));
+                    ctx.MessagesOnRetainer.AddRange(messages.Select(m => new MessageOnRetainer(m)));
                 }
 
                 // don't replay!
@@ -669,7 +669,7 @@ namespace Messenger
                 if (moveToReplay)
                 {
                     // place the messages on the repeat heap
-                    ctx.ReplayableMessages.AddRange(messages.Select(m => MessageUtils.CopyMessage(m, new ReplayableMessage())));
+                    ctx.ReplayableMessages.AddRange(messages.Select(m => new ReplayableMessage(m)));
                 }
 
                 // purge the repeat heap if necessary

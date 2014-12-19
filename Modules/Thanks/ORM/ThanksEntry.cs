@@ -9,13 +9,13 @@ namespace Thanks.ORM
     {
         [Key]
         [Required]
-        [Column("thanker", Order = 0)]
+        [Column("thanker", Order = 1)]
         [MaxLength(255)]
         public string Thanker { get; set; }
 
         [Key]
         [Required]
-        [Column("thankee_folded", Order = 1)]
+        [Column("thankee_folded", Order = 2)]
         [MaxLength(255)]
         public string ThankeeFolded { get; set; }
 

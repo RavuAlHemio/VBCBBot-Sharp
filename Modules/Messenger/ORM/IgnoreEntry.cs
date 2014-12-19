@@ -9,13 +9,13 @@ namespace Messenger.ORM
     {
         [Key]
         [Required]
-        [Column("sender_folded", Order = 0)]
+        [Column("sender_folded", Order = 1)]
         [MaxLength(255)]
         public string SenderFolded { get; set; }
 
         [Key]
         [Required]
-        [Column("recipient_folded", Order = 1)]
+        [Column("recipient_folded", Order = 2)]
         [MaxLength(255)]
         public string RecipientFolded { get; set; }
     }
