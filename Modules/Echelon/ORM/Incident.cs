@@ -10,27 +10,27 @@ namespace Echelon.ORM
     {
         [Key]
         [Required]
-        [Column("incident_id")]
+        [Column("incident_id", Order = 1)]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public long Id { get; set; }
 
         [Required]
-        [Column("trigger_id")]
+        [Column("trigger_id", Order = 2)]
         [ForeignKey("Trigger")]
         public long TriggerId { get; set; }
 
         public virtual Trigger Trigger { get; set; }
 
         [Required]
-        [Column("message_id")]
+        [Column("message_id", Order = 3)]
         public long MessageId { get; set; }
 
         [Required]
-        [Column("timestamp")]
+        [Column("timestamp", Order = 4)]
         public DateTime Timestamp { get; set; }
 
         [Required]
-        [Column("perpetrator_name")]
+        [Column("perpetrator_name", Order = 5)]
         [MaxLength(-1)]
         public string PerpetratorName { get; set; }
     }

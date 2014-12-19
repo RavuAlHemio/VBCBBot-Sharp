@@ -20,7 +20,7 @@ namespace Thanks.ORM
         public string ThankeeFolded { get; set; }
 
         [Required]
-        [Column("thank_count")]
+        [Column("thank_count", Order = 3)]
         public int ThankCount { get; set; }
     }
 }

@@ -10,12 +10,12 @@ namespace BinAdmin.ORM
     {
         [Key]
         [Required]
-        [Column("bin_id")]
+        [Column("bin_id", Order = 1)]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public long Id { get; set; }
 
         [Required]
-        [Column("bin_name")]
+        [Column("bin_name", Order = 2)]
         [MaxLength(-1)]
         public string BinName { get; set; }
 

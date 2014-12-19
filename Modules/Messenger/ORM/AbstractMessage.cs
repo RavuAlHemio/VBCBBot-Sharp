@@ -8,25 +8,25 @@ namespace Messenger.ORM
     {
         [Key]
         [Required]
-        [Column("message_id")]
+        [Column("message_id", Order = 1)]
         public long ID { get; set; }
 
         [Required]
-        [Column("timestamp")]
+        [Column("timestamp", Order = 2)]
         public DateTime Timestamp { get; set; }
 
         [Required]
-        [Column("sender_original")]
+        [Column("sender_original", Order = 3)]
         [MaxLength(255)]
         public string SenderOriginal { get; set; }
 
         [Required]
-        [Column("recipient_folded")]
+        [Column("recipient_folded", Order = 4)]
         [MaxLength(255)]
         public string RecipientFolded { get; set; }
 
         [Required]
-        [Column("body")]
+        [Column("body", Order = 5)]
         [MaxLength(-1)]
         public string Body { get; set; }
 

@@ -9,34 +9,34 @@ namespace BinAdmin.ORM
     {
         [Key]
         [Required]
-        [Column("bin_item_id")]
+        [Column("bin_item_id", Order = 1)]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public long Id { get; set; }
 
         [Required]
-        [Column("bin_id")]
+        [Column("bin_id", Order = 2)]
         [ForeignKey("Bin")]
         public long BinId { get; set; }
 
         public virtual Bin Bin { get; set; }
 
         [Required]
-        [Column("item")]
+        [Column("item", Order = 3)]
         [MaxLength(-1)]
         public string Item { get; set; }
 
         [Required]
-        [Column("arrow")]
+        [Column("arrow", Order = 4)]
         [MaxLength(-1)]
         public string Arrow { get; set; }
 
         [Required]
-        [Column("thrower")]
+        [Column("thrower", Order = 5)]
         [MaxLength(-1)]
         public string Thrower { get; set; }
 
         [Required]
-        [Column("timestamp")]
+        [Column("timestamp", Order = 6)]
         public DateTime Timestamp { get; set; }
     }
 }
