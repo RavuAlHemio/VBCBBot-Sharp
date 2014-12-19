@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -21,7 +22,7 @@ namespace Messenger
         private static readonly Regex MsgTrigger = new Regex("^!(s?)(?:msg|mail) (.+)$");
         private static readonly Regex DeliverTrigger = new Regex("^!deliver(?:msg|mail) 0*([0-9]+)$");
         private static readonly Regex IgnoreTrigger = new Regex("^!(?:msg|mail)(ignore|unignore) (.+)$");
-        private static readonly Regex ReplayTrigger = new Regex("^!replaymsg 0*([0-9]+)$");
+        private static readonly Regex ReplayTrigger = new Regex("^!replay(?:msg|mail) 0*([0-9]+)$");
 
         private MessengerConfig _config;
 
@@ -253,8 +254,265 @@ namespace Messenger
                 return;
             }
             var fetchCount = int.Parse(match.Groups[1].Value);
+            var lowerSenderName = message.UserName.ToLowerInvariant();
 
-            // TODO
+            List<MessageOnRetainer> messages;
+            int messagesLeft;
+            using (var ctx = GetNewContext())
+            {
+                // get the messages
+                messages = ctx.MessagesOnRetainer
+                    .Where(m => m.RecipientFolded == lowerSenderName)
+                    .OrderBy(m => m.ID)
+                    .Take(fetchCount)
+                    .ToList()
+                ;
+
+                // delete them
+                ctx.MessagesOnRetainer.RemoveRange(messages);
+                ctx.SaveChanges();
+
+                // check how many are left
+                messagesLeft = ctx.MessagesOnRetainer
+                    .Count(m => m.RecipientFolded == lowerSenderName)
+                ;
+            }
+
+            // deliver them
+            if (messages.Count > 0)
+            {
+                Connector.SendMessage(string.Format(
+                    "Delivering {0} {1} for [noparse]{2}[/noparse]!",
+                    messages.Count,
+                    messages.Count == 1 ? "message" : "messages",
+                    message.UserName
+                ));
+                foreach (var msg in messages)
+                {
+                    Logger.DebugFormat(
+                        "delivering {0}'s retained message {1} to {2} as part of a chunk",
+                        Util.LiteralString(msg.SenderOriginal),
+                        Util.LiteralString(msg.Body),
+                        Util.LiteralString(message.UserName)
+                    );
+                    Connector.SendMessage(string.Format(
+                        "{0} <[noparse]{1}[/noparse]> {2}",
+                        FormatTimestamp(msg.ID, msg.Timestamp),
+                        msg.SenderOriginal,
+                        msg.Body
+                    ));
+                }
+            }
+
+            // output remaining messages count
+            if (messagesLeft == 0)
+            {
+                if (messages.Count > 0)
+                {
+                    Connector.SendMessage(string.Format(
+                        "[noparse]{0}[/noparse] has no more messages left to deliver!",
+                        message.UserName
+                    ));
+                }
+                else
+                {
+                    Connector.SendMessage(string.Format(
+                        "[noparse]{0}[/noparse] has no messages to deliver!",
+                        message.UserName
+                    ));
+                }
+            }
+            else
+            {
+                Connector.SendMessage(string.Format(
+                    "[noparse]{0}[/noparse] has {1} {2} left to deliver!",
+                    message.UserName,
+                    messagesLeft,
+                    (messagesLeft == 1) ? "message" : "messages"
+                ));
+            }
+        }
+
+        protected void PotentialReplayRequest(ChatboxMessage message)
+        {
+            var body = message.BodyBBCode;
+            var match = ReplayTrigger.Match(body);
+            if (!match.Success)
+            {
+                return;
+            }
+
+            if (match.Groups[1].Length > 3)
+            {
+                Connector.SendMessage(string.Format(
+                    "[noparse]{0}[/noparse]: I am absolutely not replaying that many messages at once.",
+                    message.UserName
+                ));
+                return;
+            }
+
+            var replayCount = int.Parse(match.Groups[1].Value);
+            if (replayCount > _config.MaxMessagesToReplay)
+            {
+                Connector.SendMessage(string.Format(
+                    "[noparse]{0}[/noparse]: I only remember a backlog of up to {1} messages.",
+                    message.UserName,
+                    _config.MaxMessagesToReplay
+                ));
+                return;
+            }
+            else if (replayCount == 0)
+            {
+                return;
+            }
+
+            var lowerSenderName = message.UserName.ToLowerInvariant();
+
+            List<ReplayableMessage> messages;
+            using (var ctx = GetNewContext())
+            {
+                // get the messages
+                messages = ctx.ReplayableMessages
+                    .Where(m => m.RecipientFolded == lowerSenderName)
+                    .OrderByDescending(m => m.ID)
+                    .Take(replayCount)
+                    .Reverse()
+                    .ToList()
+                ;
+            }
+
+            if (messages.Count == 0)
+            {
+                Connector.SendMessage(string.Format(
+                    "[noparse]{0}[/noparse]: You have no messages to replay!",
+                    message.UserName
+                ));
+                return;
+            }
+            if (messages.Count == 1)
+            {
+                Logger.DebugFormat("replaying a message for {0}", Util.LiteralString(message.UserName));
+                Connector.SendMessage(string.Format(
+                    "Replaying message for [noparse]{0}[/noparse]! {1} <[noparse]{2}[/noparse]> {3}",
+                    message.UserName,
+                    FormatTimestamp(messages[0].ID, messages[0].Timestamp),
+                    messages[0].SenderOriginal,
+                    messages[0].Body
+                ));
+                return;
+            }
+
+            Connector.SendMessage(string.Format(
+                "[noparse]{0}[/noparse]: Replaying {1} messages!",
+                message.UserName,
+                messages.Count
+            ));
+            Logger.DebugFormat(
+                "replaying {0} messages for {1}",
+                messages.Count,
+                Util.LiteralString(message.UserName)
+            );
+            foreach (var msg in messages)
+            {
+                Connector.SendMessage(string.Format(
+                    "{0} <[noparse]{1}[/noparse]> {2}!",
+                    FormatTimestamp(msg.ID, msg.Timestamp),
+                    msg.SenderOriginal,
+                    msg.Body
+                ));
+            }
+            Connector.SendMessage(string.Format(
+                "[noparse]{0}[/noparse]: Take care!",
+                message.UserName
+            ));
+        }
+
+        protected void PotentialIgnoreListRequest(ChatboxMessage message)
+        {
+            var body = message.BodyBBCode;
+            var match = IgnoreTrigger.Match(body);
+            if (!match.Success)
+            {
+                return;
+            }
+
+            var command = match.Groups[1].Value;
+            var blockSender = match.Groups[2].Value.Trim();
+            var blockSenderLower = blockSender.ToLowerInvariant();
+            var blockRecipientLower = message.UserName.ToLowerInvariant();
+
+            bool isIgnored;
+            using (var ctx = GetNewContext())
+            {
+                isIgnored = ctx.IgnoreList
+                    .Any(ie => ie.SenderFolded == blockSenderLower && ie.RecipientFolded == blockRecipientLower);
+            }
+
+            if (command == "ignore")
+            {
+                if (isIgnored)
+                {
+                    Connector.SendMessage(string.Format(
+                        "[noparse]{0}[/noparse]: You are already ignoring [i][noparse]{1}[/noparse][/i].",
+                        message.UserName,
+                        blockSender
+                    ));
+                    return;
+                }
+
+                using (var ctx = GetNewContext())
+                {
+                    var entry = new IgnoreEntry
+                    {
+                        SenderFolded = blockSenderLower,
+                        RecipientFolded = blockRecipientLower
+                    };
+                    ctx.IgnoreList.Add(entry);
+                    ctx.SaveChanges();
+                }
+                Logger.DebugFormat(
+                    "{0} is now ignoring {1}",
+                    Util.LiteralString(message.UserName),
+                    Util.LiteralString(blockSender)
+                );
+
+                Connector.SendMessage(string.Format(
+                    "[noparse]{0}[/noparse]: You are now ignoring [i][noparse]{1}[/noparse][/i].",
+                    message.UserName,
+                    blockSender
+                ));
+            }
+            else if (command == "unignore")
+            {
+                if (isIgnored)
+                {
+                    Connector.SendMessage(string.Format(
+                        "[noparse]{0}[/noparse]: You have not been ignoring [i][noparse]{1}[/noparse][/i].",
+                        message.UserName,
+                        blockSender
+                    ));
+                    return;
+                }
+
+                using (var ctx = GetNewContext())
+                {
+                    var entry = ctx.IgnoreList
+                        .FirstOrDefault(ie => ie.SenderFolded == blockSenderLower && ie.RecipientFolded == blockRecipientLower);
+                    ctx.IgnoreList.Remove(entry);
+                    ctx.SaveChanges();
+                }
+                Logger.DebugFormat(
+                    "{0} is not ignoring {1} anymore",
+                    Util.LiteralString(message.UserName),
+                    Util.LiteralString(blockSender)
+                );
+
+                Connector.SendMessage(string.Format(
+                    "[noparse]{0}[/noparse]: You are not ignoring [i][noparse]{1}[/noparse][/i] anymore.",
+                    message.UserName,
+                    blockSender
+                ));
+            }
         }
 
         private MessengerContext GetNewContext()
@@ -276,12 +534,162 @@ namespace Messenger
 
         protected override void ProcessUpdatedMessage(ChatboxMessage message, bool isPartOfInitialSalvo = false, bool isEdited = false, bool isBanned = false)
         {
-            if (isPartOfInitialSalvo || isEdited)
+            if (isPartOfInitialSalvo || isEdited || message.UserName == Connector.ForumConfig.Username)
             {
                 return;
             }
 
-            // TODO
+            var body = Util.RemoveControlCharactersAndStrip(message.BodyBBCode);
+            var lowerNickname = message.UserName.ToLowerInvariant();
+
+            if (!isBanned)
+            {
+                PotentialMessageSend(message);
+                PotentialDeliverRequest(message);
+                PotentialIgnoreListRequest(message);
+                PotentialReplayRequest(message);
+            }
+
+            // even banned users get messages; they just can't respond to them
+
+            if (Connector.StfuDeadline.HasValue && Connector.StfuDeadline.Value > DateTime.Now)
+            {
+                // don't bother just yet
+                return;
+            }
+
+            // check if the sender should get any messages
+            List<Message> messages;
+            int numberMessagesOnRetainer;
+            using (var ctx = GetNewContext())
+            {
+                messages = ctx.Messages
+                    .Where(m => m.RecipientFolded == lowerNickname)
+                    .OrderBy(m => m.ID)
+                    .ToList()
+                ;
+                numberMessagesOnRetainer = ctx.MessagesOnRetainer
+                    .Count(m => m.RecipientFolded == lowerNickname)
+                ;
+            }
+            var messagesToDisplay = messages
+                .Where(m => message.ID - m.ID < 1 || message.ID - m.ID > 2)
+                .ToList()
+            ;
+
+            var retainerText = (numberMessagesOnRetainer > 0)
+                ? string.Format(" (and {0} pending !delivermsg)", numberMessagesOnRetainer)
+                : ""
+            ;
+
+            var moveToReplay = true;
+            if (messagesToDisplay.Count == 0)
+            {
+                // meh
+                // (don't return yet; delete the skipped "responded directly to" messages)
+            }
+            else if (messagesToDisplay.Count == 1)
+            {
+                // one message
+                Logger.DebugFormat(
+                    "delivering {0}'s message #{1} {2} to {3}",
+                    Util.LiteralString(messagesToDisplay[0].SenderOriginal),
+                    messagesToDisplay[0].ID,
+                    Util.LiteralString(messagesToDisplay[0].Body),
+                    Util.LiteralString(message.UserName)
+                );
+                Connector.SendMessage(string.Format(
+                    "Message for [noparse]{0}[/noparse]{1}! {2} <[noparse]{3}[/noparse]> {4}",
+                    message.UserName,
+                    retainerText,
+                    FormatTimestamp(messagesToDisplay[0].ID, messagesToDisplay[0].Timestamp),
+                    messagesToDisplay[0].SenderOriginal,
+                    messagesToDisplay[0].Body
+                ));
+            }
+            else if (messagesToDisplay.Count >= _config.TooManyMessages)
+            {
+                // use messages instead of messagesToDisplay to put all of them on retainer
+                Logger.DebugFormat(
+                    "{0} got {1} messages; putting on retainer",
+                    Util.LiteralString(message.UserName),
+                    messages.Count
+                );
+                Connector.SendMessage(string.Format(
+                    "{0} new messages for [noparse]{1}[/noparse]{2}! Use \u201c!delivermsg [i]maxnumber[/i]\u201d to get them!",
+                    messages.Count,
+                    message.UserName,
+                    retainerText
+                ));
+
+                using (var ctx = GetNewContext())
+                {
+                    // put messages on retainer
+                    ctx.MessagesOnRetainer.AddRange(messages.Select(m => new MessageOnRetainer(m)));
+                }
+
+                // don't replay!
+                moveToReplay = false;
+
+                // the content of messages will be cleaned out from ctx.Messages below
+            }
+            else
+            {
+                // multiple but not too many messages
+                Connector.SendMessage(string.Format(
+                    "{0} new messages for [noparse]{1}[/noparse]{2}!",
+                    messagesToDisplay.Count,
+                    message.UserName,
+                    retainerText
+                ));
+                foreach (var msg in messagesToDisplay)
+                {
+                    Logger.DebugFormat(
+                        "delivering {0}'s message #{1} {2} to {3} as part of a chunk",
+                        Util.LiteralString(msg.SenderOriginal),
+                        msg.ID,
+                        Util.LiteralString(msg.Body),
+                        Util.LiteralString(message.UserName)
+                    );
+                    Connector.SendMessage(string.Format(
+                        "{0} <[noparse]{1}[/noparse]> {2}",
+                        FormatTimestamp(msg.ID, msg.Timestamp),
+                        msg.SenderOriginal,
+                        msg.Body
+                    ));
+                }
+                Connector.SendMessage(string.Format(
+                    "[noparse]{0}[/noparse]: Have a nice day!",
+                    message.UserName
+                ));
+            }
+
+            using (var ctx = GetNewContext())
+            {
+                if (moveToReplay)
+                {
+                    // place the messages on the repeat heap
+                    ctx.ReplayableMessages.AddRange(messages.Select(m => new ReplayableMessage(m)));
+                }
+
+                // purge the repeat heap if necessary
+                var currentReplayables = ctx.ReplayableMessages
+                    .Where(rm => rm.RecipientFolded == lowerNickname)
+                    .OrderBy(rm => rm.ID)
+                    .ToList()
+                ;
+                if (currentReplayables.Count > _config.MaxMessagesToReplay)
+                {
+                    var deleteCount = currentReplayables.Count - _config.MaxMessagesToReplay;
+                    foreach (var oldReplayable in currentReplayables.Take(deleteCount))
+                    {
+                        ctx.ReplayableMessages.Remove(oldReplayable);
+                    }
+                }
+
+                // remove the messages from the delivery queue
+                ctx.Messages.RemoveRange(messages);
+            }
         }
     }
 }
