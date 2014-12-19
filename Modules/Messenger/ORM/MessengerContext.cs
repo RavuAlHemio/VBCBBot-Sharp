@@ -16,6 +16,7 @@ namespace Messenger.ORM
             Database.SetInitializer<MessengerContext>(null);
         }
 
+        /*
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
             modelBuilder.Entity<IgnoreEntry>().HasKey(ie => new {
@@ -23,6 +24,7 @@ namespace Messenger.ORM
                 ie.RecipientFolded
             });
         }
+        */
 
         public MessengerContext(DbConnection connectionToOwn) : base(connectionToOwn, true)
         {
