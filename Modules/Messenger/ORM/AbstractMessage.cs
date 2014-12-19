@@ -30,5 +30,18 @@ namespace Messenger.ORM
         [Column("body")]
         [MaxLength]
         public string Body { get; set; }
+
+        public AbstractMessage()
+        {
+        }
+
+        public AbstractMessage(AbstractMessage other)
+        {
+            this.ID = other.ID;
+            this.Timestamp = other.Timestamp;
+            this.SenderOriginal = other.SenderOriginal;
+            this.RecipientFolded = other.RecipientFolded;
+            this.Body = other.Body;
+        }
     }
 }

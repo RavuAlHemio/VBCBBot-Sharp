@@ -11,13 +11,13 @@ namespace Messenger
         public string DatabaseProvider { get; set; }
         public string DatabaseConnectionString { get; set; }
         public int TooManyMessages { get; set; }
-        public string ArchiveLink { get; set; }
+        public string ArchiveLinkTemplate { get; set; }
         public int MaxMessagesToReplay { get; set; }
 
         public MessengerConfig(JObject obj)
         {
             TooManyMessages = 10;
-            ArchiveLink = null;
+            ArchiveLinkTemplate = null;
             MaxMessagesToReplay = 10;
 
             var ser = new JsonSerializer();
