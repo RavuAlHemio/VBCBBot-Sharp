@@ -689,6 +689,9 @@ namespace Messenger
 
                 // remove the messages from the delivery queue
                 ctx.Messages.RemoveRange(messages);
+
+                // commit
+                ctx.SaveChanges();
             }
         }
     }
