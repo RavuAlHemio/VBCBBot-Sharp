@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data.Entity.Validation;
 using log4net;
 
 namespace VBCBBot
@@ -25,7 +26,21 @@ namespace VBCBBot
         {
             try
             {
-                ProcessUpdatedMessage(e.Message.Message, e.Message.IsPartOfInitialSalvo, e.Message.IsEdited, e.Message.IsBanned);
+                ProcessUpdatedMessage(e.Message.Message, e.Message.IsPartOfInitialSalvo, e.Message.IsEdited,
+                    e.Message.IsBanned);
+            }
+            catch (DbEntityValidationException exc)
+            {
+                // special-case this for better error messages
+                Logger.ErrorFormat("module {0} failed to process updated message due to validation error:\n{1}", this.GetType().Name, exc);
+                foreach (var eve in exc.EntityValidationErrors)
+                {
+                    Logger.InfoFormat("-- entity of type {0} in state {1}", eve.Entry.Entity.GetType().Name, eve.Entry.State);
+                    foreach (var ve in eve.ValidationErrors)
+                    {
+                        Logger.InfoFormat("---- property {0} error {1}", ve.PropertyName, ve.ErrorMessage);
+                    }
+                }
             }
             catch (Exception exc)
             {
