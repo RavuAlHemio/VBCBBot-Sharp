@@ -560,7 +560,6 @@ namespace Messenger
 
             // check if the sender should get any messages
             List<Message> messages;
-            int numberMessagesOnRetainer;
             using (var ctx = GetNewContext())
             {
                 messages = ctx.Messages
@@ -568,104 +567,97 @@ namespace Messenger
                     .OrderBy(m => m.ID)
                     .ToList()
                 ;
-                numberMessagesOnRetainer = ctx.MessagesOnRetainer
-                    .Count(m => m.RecipientFolded == lowerNickname)
+                var numberMessagesOnRetainer = ctx.MessagesOnRetainer
+                    .Count(m => m.RecipientFolded == lowerNickname);
+                var messagesToDisplay = messages
+                    .Where(m => message.ID - m.ID < 1 || message.ID - m.ID > 2)
+                    .ToList()
                 ;
-            }
-            var messagesToDisplay = messages
-                .Where(m => message.ID - m.ID < 1 || message.ID - m.ID > 2)
-                .ToList()
-            ;
 
-            var retainerText = (numberMessagesOnRetainer > 0)
-                ? string.Format(" (and {0} pending !delivermsg)", numberMessagesOnRetainer)
-                : ""
-            ;
+                var retainerText = (numberMessagesOnRetainer > 0)
+                    ? string.Format(" (and {0} pending !delivermsg)", numberMessagesOnRetainer)
+                    : ""
+                ;
 
-            var moveToReplay = true;
-            if (messagesToDisplay.Count == 0)
-            {
-                // meh
-                // (don't return yet; delete the skipped "responded directly to" messages)
-            }
-            else if (messagesToDisplay.Count == 1)
-            {
-                // one message
-                Logger.DebugFormat(
-                    "delivering {0}'s message #{1} {2} to {3}",
-                    Util.LiteralString(messagesToDisplay[0].SenderOriginal),
-                    messagesToDisplay[0].ID,
-                    Util.LiteralString(messagesToDisplay[0].Body),
-                    Util.LiteralString(message.UserName)
-                );
-                Connector.SendMessage(string.Format(
-                    "Message for [noparse]{0}[/noparse]{1}! {2} <[noparse]{3}[/noparse]> {4}",
-                    message.UserName,
-                    retainerText,
-                    FormatTimestamp(messagesToDisplay[0].ID, messagesToDisplay[0].Timestamp),
-                    messagesToDisplay[0].SenderOriginal,
-                    messagesToDisplay[0].Body
-                ));
-            }
-            else if (messagesToDisplay.Count >= _config.TooManyMessages)
-            {
-                // use messages instead of messagesToDisplay to put all of them on retainer
-                Logger.DebugFormat(
-                    "{0} got {1} messages; putting on retainer",
-                    Util.LiteralString(message.UserName),
-                    messages.Count
-                );
-                Connector.SendMessage(string.Format(
-                    "{0} new messages for [noparse]{1}[/noparse]{2}! Use \u201c!delivermsg [i]maxnumber[/i]\u201d to get them!",
-                    messages.Count,
-                    message.UserName,
-                    retainerText
-                ));
-
-                using (var ctx = GetNewContext())
+                var moveToReplay = true;
+                if (messagesToDisplay.Count == 0)
                 {
-                    // put messages on retainer
-                    ctx.MessagesOnRetainer.AddRange(messages.Select(m => new MessageOnRetainer(m)));
+                    // meh
+                    // (don't return yet; delete the skipped "responded directly to" messages)
                 }
-
-                // don't replay!
-                moveToReplay = false;
-
-                // the content of messages will be cleaned out from ctx.Messages below
-            }
-            else
-            {
-                // multiple but not too many messages
-                Connector.SendMessage(string.Format(
-                    "{0} new messages for [noparse]{1}[/noparse]{2}!",
-                    messagesToDisplay.Count,
-                    message.UserName,
-                    retainerText
-                ));
-                foreach (var msg in messagesToDisplay)
+                else if (messagesToDisplay.Count == 1)
                 {
+                    // one message
                     Logger.DebugFormat(
-                        "delivering {0}'s message #{1} {2} to {3} as part of a chunk",
-                        Util.LiteralString(msg.SenderOriginal),
-                        msg.ID,
-                        Util.LiteralString(msg.Body),
+                        "delivering {0}'s message #{1} {2} to {3}",
+                        Util.LiteralString(messagesToDisplay[0].SenderOriginal),
+                        messagesToDisplay[0].ID,
+                        Util.LiteralString(messagesToDisplay[0].Body),
                         Util.LiteralString(message.UserName)
                     );
                     Connector.SendMessage(string.Format(
-                        "{0} <[noparse]{1}[/noparse]> {2}",
-                        FormatTimestamp(msg.ID, msg.Timestamp),
-                        msg.SenderOriginal,
-                        msg.Body
+                        "Message for [noparse]{0}[/noparse]{1}! {2} <[noparse]{3}[/noparse]> {4}",
+                        message.UserName,
+                        retainerText,
+                        FormatTimestamp(messagesToDisplay[0].ID, messagesToDisplay[0].Timestamp),
+                        messagesToDisplay[0].SenderOriginal,
+                        messagesToDisplay[0].Body
                     ));
                 }
-                Connector.SendMessage(string.Format(
-                    "[noparse]{0}[/noparse]: Have a nice day!",
-                    message.UserName
-                ));
-            }
+                else if (messagesToDisplay.Count >= _config.TooManyMessages)
+                {
+                    // use messages instead of messagesToDisplay to put all of them on retainer
+                    Logger.DebugFormat(
+                        "{0} got {1} messages; putting on retainer",
+                        Util.LiteralString(message.UserName),
+                        messages.Count
+                    );
+                    Connector.SendMessage(string.Format(
+                        "{0} new messages for [noparse]{1}[/noparse]{2}! Use \u201c!delivermsg [i]maxnumber[/i]\u201d to get them!",
+                        messages.Count,
+                        message.UserName,
+                        retainerText
+                    ));
 
-            using (var ctx = GetNewContext())
-            {
+                    // put messages on retainer
+                    ctx.MessagesOnRetainer.AddRange(messages.Select(m => new MessageOnRetainer(m)));
+
+                    // don't replay!
+                    moveToReplay = false;
+
+                    // the content of messages will be cleaned out from ctx.Messages below
+                }
+                else
+                {
+                    // multiple but not too many messages
+                    Connector.SendMessage(string.Format(
+                        "{0} new messages for [noparse]{1}[/noparse]{2}!",
+                        messagesToDisplay.Count,
+                        message.UserName,
+                        retainerText
+                    ));
+                    foreach (var msg in messagesToDisplay)
+                    {
+                        Logger.DebugFormat(
+                            "delivering {0}'s message #{1} {2} to {3} as part of a chunk",
+                            Util.LiteralString(msg.SenderOriginal),
+                            msg.ID,
+                            Util.LiteralString(msg.Body),
+                            Util.LiteralString(message.UserName)
+                        );
+                        Connector.SendMessage(string.Format(
+                            "{0} <[noparse]{1}[/noparse]> {2}",
+                            FormatTimestamp(msg.ID, msg.Timestamp),
+                            msg.SenderOriginal,
+                            msg.Body
+                        ));
+                    }
+                    Connector.SendMessage(string.Format(
+                        "[noparse]{0}[/noparse]: Have a nice day!",
+                        message.UserName
+                    ));
+                }
+
                 if (moveToReplay)
                 {
                     // place the messages on the repeat heap
