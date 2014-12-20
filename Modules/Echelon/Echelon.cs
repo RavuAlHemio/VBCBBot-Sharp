@@ -40,20 +40,9 @@ namespace Echelon
                 return;
             }
 
+            var target = statsMatch.Groups[1].Value;
             var targetLower = statsMatch.Groups[1].Value.ToLowerInvariant();
             var salutation = _config.Spymasters.Contains(message.UserName) ? "Spymaster" : "Agent";
-
-            if (_config.UsernamesToSpecialCounts.ContainsKey(targetLower))
-            {
-                Connector.SendMessage(string.Format(
-                    "{0} [noparse]{1}[/noparse]: Subject [noparse]{2}[/noparse] {3}.",
-                    salutation,
-                    message.UserName,
-                    statsMatch.Groups[1].Value,
-                    _config.UsernamesToSpecialCounts[targetLower]
-                ));
-                return;
-            }
 
             long incidentCount;
             using (var ctx = GetNewContext())
@@ -61,7 +50,20 @@ namespace Echelon
                 incidentCount = ctx.Incidents.Where(i => i.PerpetratorName.ToLower() == targetLower).LongCount();
             }
 
-            if (incidentCount == 0)
+            if (_config.UsernamesToSpecialCountFormats.ContainsKey(targetLower))
+            {
+                Connector.SendMessage(string.Format(
+                    "{0} [noparse]{1}[/noparse]: {2}",
+                    salutation,
+                    message.UserName,
+                    string.Format(
+                        _config.UsernamesToSpecialCountFormats[targetLower],
+                        target,
+                        incidentCount
+                    )
+                ));
+            }
+            else if (incidentCount == 0)
             {
                 Connector.SendMessage(string.Format(
                     "{0} [noparse]{1}[/noparse]: Subject [noparse]{2}[/noparse] may or may not have caused any incident.",
