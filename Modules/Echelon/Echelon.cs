@@ -41,14 +41,25 @@ namespace Echelon
             }
 
             var targetLower = statsMatch.Groups[1].Value.ToLowerInvariant();
+            var salutation = _config.Spymasters.Contains(message.UserName) ? "Spymaster" : "Agent";
+
+            if (_config.UsernamesToSpecialCounts.ContainsKey(targetLower))
+            {
+                Connector.SendMessage(string.Format(
+                    "{0} [noparse]{1}[/noparse]: Subject [noparse]{2}[/noparse] {3}.",
+                    salutation,
+                    message.UserName,
+                    statsMatch.Groups[1].Value,
+                    _config.UsernamesToSpecialCounts[targetLower]
+                ));
+                return;
+            }
 
             long incidentCount;
             using (var ctx = GetNewContext())
             {
                 incidentCount = ctx.Incidents.Where(i => i.PerpetratorName.ToLower() == targetLower).LongCount();
             }
-
-            var salutation = _config.Spymasters.Contains(message.UserName) ? "Spymaster" : "Agent";
 
             if (incidentCount == 0)
             {
