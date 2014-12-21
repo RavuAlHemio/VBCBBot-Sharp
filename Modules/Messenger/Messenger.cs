@@ -203,7 +203,7 @@ namespace Messenger
                 var msg = new Message
                 {
                     ID = message.ID,
-                    Timestamp = message.Timestamp,
+                    Timestamp = message.Timestamp.ToUniversalTime(),
                     SenderOriginal = message.UserName,
                     RecipientFolded = lowerTargetName,
                     Body = sendBody
@@ -297,7 +297,7 @@ namespace Messenger
                     );
                     Connector.SendMessage(string.Format(
                         "{0} <[noparse]{1}[/noparse]> {2}",
-                        FormatTimestamp(msg.ID, msg.Timestamp),
+                        FormatAssumedUtcTimestamp(msg.ID, msg.Timestamp),
                         msg.SenderOriginal,
                         msg.Body
                     ));
@@ -395,7 +395,7 @@ namespace Messenger
                 Connector.SendMessage(string.Format(
                     "Replaying message for [noparse]{0}[/noparse]! {1} <[noparse]{2}[/noparse]> {3}",
                     message.UserName,
-                    FormatTimestamp(messages[0].ID, messages[0].Timestamp),
+                    FormatAssumedUtcTimestamp(messages[0].ID, messages[0].Timestamp),
                     messages[0].SenderOriginal,
                     messages[0].Body
                 ));
@@ -416,7 +416,7 @@ namespace Messenger
             {
                 Connector.SendMessage(string.Format(
                     "{0} <[noparse]{1}[/noparse]> {2}!",
-                    FormatTimestamp(msg.ID, msg.Timestamp),
+                    FormatAssumedUtcTimestamp(msg.ID, msg.Timestamp),
                     msg.SenderOriginal,
                     msg.Body
                 ));
@@ -521,13 +521,14 @@ namespace Messenger
             return new MessengerContext(conn);
         }
 
-        protected string FormatTimestamp(long messageID, DateTime timestamp)
+        protected string FormatAssumedUtcTimestamp(long messageID, DateTime timestamp)
         {
+            var localTime = DateTime.SpecifyKind(timestamp, DateTimeKind.Utc).ToLocalTime();
             var timestampFormat = (_config.ArchiveLinkTemplate == null) ? "[{0}]" : "[{0}] ([url={1}]archive[/url])";
             var timestampLinkUrl = (_config.ArchiveLinkTemplate == null) ? "" : string.Format(_config.ArchiveLinkTemplate, messageID);
             return string.Format(
                 timestampFormat,
-                timestamp.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture),
+                localTime.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture),
                 timestampLinkUrl
             );
         }
@@ -599,7 +600,7 @@ namespace Messenger
                         "Message for [noparse]{0}[/noparse]{1}! {2} <[noparse]{3}[/noparse]> {4}",
                         message.UserName,
                         retainerText,
-                        FormatTimestamp(messagesToDisplay[0].ID, messagesToDisplay[0].Timestamp),
+                        FormatAssumedUtcTimestamp(messagesToDisplay[0].ID, messagesToDisplay[0].Timestamp),
                         messagesToDisplay[0].SenderOriginal,
                         messagesToDisplay[0].Body
                     ));
@@ -647,7 +648,7 @@ namespace Messenger
                         );
                         Connector.SendMessage(string.Format(
                             "{0} <[noparse]{1}[/noparse]> {2}",
-                            FormatTimestamp(msg.ID, msg.Timestamp),
+                            FormatAssumedUtcTimestamp(msg.ID, msg.Timestamp),
                             msg.SenderOriginal,
                             msg.Body
                         ));
