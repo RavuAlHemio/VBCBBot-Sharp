@@ -203,7 +203,7 @@ namespace Messenger
                 var msg = new Message
                 {
                     ID = message.ID,
-                    Timestamp = message.Timestamp.ToUniversalTime(),
+                    Timestamp = DateTime.SpecifyKind(message.Timestamp.ToUniversalTime(), DateTimeKind.Unspecified),
                     SenderOriginal = message.UserName,
                     RecipientFolded = lowerTargetName,
                     Body = sendBody
