@@ -259,5 +259,15 @@ namespace VBCBBot
             }
             return ret.ToString().Trim();
         }
+
+        public static DateTime ToUniversalTimeForDatabase(this DateTime dt)
+        {
+            return DateTime.SpecifyKind(dt.ToUniversalTime(), DateTimeKind.Unspecified);
+        }
+
+        public static DateTime ToLocalTimeFromDatabase(this DateTime dt)
+        {
+            return DateTime.SpecifyKind(dt, DateTimeKind.Utc).ToLocalTime();
+        }
     }
 }

@@ -160,7 +160,7 @@ namespace Echelon
                     {
                         TriggerId = trigger.Id,
                         MessageId = message.ID,
-                        Timestamp = DateTime.Now,
+                        Timestamp = DateTime.UtcNow.ToUniversalTimeForDatabase(),
                         PerpetratorName = message.UserName
                     };
                     ctx.Incidents.Add(inc);

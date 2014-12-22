@@ -188,7 +188,7 @@ namespace BinAdmin
                 return;
             }
 
-            var timestamp = DateTime.Now;
+            var timestamp = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
 
             Logger.DebugFormat(
                 "{0} tossed {1} into {2} using {3}",
@@ -218,7 +218,7 @@ namespace BinAdmin
                         Thrower = message.UserName,
                         Arrow = arrow,
                         Item = what,
-                        Timestamp = timestamp
+                        Timestamp = timestamp.ToUniversalTimeForDatabase()
                     };
                     context.BinItems.Add(item);
                     context.SaveChanges();
