@@ -540,7 +540,6 @@ namespace Messenger
                 return;
             }
 
-            var body = Util.RemoveControlCharactersAndStrip(message.BodyBBCode);
             var lowerNickname = message.UserName.ToLowerInvariant();
 
             if (!isBanned)
