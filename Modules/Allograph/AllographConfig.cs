@@ -28,6 +28,8 @@ namespace Allograph
             public Regex Regex { get; private set; }
 
             public string ReplacementString { get; set; }
+
+            public string Comment { get; set; }
         }
 
         public List<Replacement> Replacements { get; set; }
