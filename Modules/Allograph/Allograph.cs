@@ -1,5 +1,4 @@
-﻿using System.Runtime.Remoting.Messaging;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 using VBCBBot;
 
 namespace Allograph
@@ -19,6 +18,12 @@ namespace Allograph
         {
             if (isPartOfInitialSalvo || isEdited || isBanned)
             {
+                return;
+            }
+
+            if (message.UserName == Connector.ForumConfig.Username)
+            {
+                // prevent loops
                 return;
             }
 
