@@ -47,7 +47,7 @@ namespace Echelon
             long incidentCount;
             using (var ctx = GetNewContext())
             {
-                incidentCount = ctx.Incidents.Where(i => i.PerpetratorName.ToLower() == targetLower).LongCount();
+                incidentCount = ctx.Incidents.Where(i => i.PerpetratorName == targetLower).LongCount();
             }
 
             if (_config.UsernamesToSpecialCountFormats.ContainsKey(targetLower))
@@ -161,7 +161,7 @@ namespace Echelon
                         TriggerId = trigger.Id,
                         MessageId = message.ID,
                         Timestamp = DateTime.UtcNow.ToUniversalTimeForDatabase(),
-                        PerpetratorName = message.UserName
+                        PerpetratorName = message.UserName.ToLowerInvariant()
                     };
                     ctx.Incidents.Add(inc);
                 }
