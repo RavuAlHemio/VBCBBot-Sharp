@@ -31,7 +31,7 @@ namespace VBCBBot
                 }
                 else
                 {
-                    texts = string.Join("", textNodesToJoin.Select(n => n.Text));
+                    texts = string.Concat(textNodesToJoin.Select(n => n.Text));
                     if (texts.Length > 0)
                     {
                         ret.Add(new BBCodeDom.TextNode(texts));
@@ -43,7 +43,7 @@ namespace VBCBBot
 
             if (textNodesToJoin.Count > 0)
             {
-                texts = string.Join("", textNodesToJoin.Select(n => n.Text));
+                texts = string.Concat(textNodesToJoin.Select(n => n.Text));
                 if (texts.Length > 0)
                 {
                     ret.Add(new BBCodeDom.TextNode(texts));
@@ -294,7 +294,7 @@ namespace VBCBBot
                                 {
                                     // [code]
                                     // hopefully this is correct enough
-                                    var codeString = string.Join("", childNode.SelectSingleNode(".//pre").InnerText);
+                                    var codeString = string.Concat(childNode.SelectSingleNode(".//pre").InnerText);
                                     ret.Add(new BBCodeDom.Element("code", new BBCodeDom.Node[] { new BBCodeDom.TextNode(codeString) }));
                                 }
                                 else if (quoteDiv != null)

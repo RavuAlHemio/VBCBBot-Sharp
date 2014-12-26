@@ -61,7 +61,7 @@ namespace VBCBBot
         {
             get
             {
-                return string.Join("", UserNameDom.Select(x => x.ToString()));
+                return string.Concat(UserNameDom.Select(x => x.ToString()));
             }
         }
 
@@ -91,7 +91,7 @@ namespace VBCBBot
         {
             get
             {
-                return string.Join("", BodyDom.Select(x => x.BBCodeString));
+                return string.Concat(BodyDom.Select(x => x.BBCodeString));
             }
         }
     }

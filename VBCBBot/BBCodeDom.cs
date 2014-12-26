@@ -114,7 +114,7 @@ namespace VBCBBot
                         EscapedOpeningSquareBracket,
                         Name,
                         av,
-                        string.Join("", InternalChildren.Select(c => c.EscapedBBCodeString))
+                        string.Concat(InternalChildren.Select(c => c.EscapedBBCodeString))
                     );
                 }
             }
@@ -128,7 +128,7 @@ namespace VBCBBot
                         "[{0}{1}]{2}[/{0}]",
                         Name,
                         av,
-                        string.Join("", InternalChildren.Select(c => c.BBCodeString))
+                        string.Concat(InternalChildren.Select(c => c.BBCodeString))
                     );
                 }
             }
@@ -145,7 +145,7 @@ namespace VBCBBot
             {
                 get
                 {
-                    return "[noparse][*][/noparse]" + string.Join("", InternalChildren.Select(c => c.EscapedBBCodeString));
+                    return "[noparse][*][/noparse]" + string.Concat(InternalChildren.Select(c => c.EscapedBBCodeString));
                 }
             }
 
@@ -153,7 +153,7 @@ namespace VBCBBot
             {
                 get
                 {
-                    return "[*]" + string.Join("", InternalChildren.Select(c => c.BBCodeString));
+                    return "[*]" + string.Concat(InternalChildren.Select(c => c.BBCodeString));
                 }
             }
         }
