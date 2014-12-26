@@ -566,21 +566,14 @@ namespace VBCBBot
                 _securityToken, messageID, EncodeOutgoingMessage(message)
             );
 
-            byte[] editResponse;
             try
             {
-                editResponse = WebPostFormData(PostEditUrl, requestString);
+                WebPostFormData(PostEditUrl, requestString);
             }
             catch (WebException ex)
             {
                 Logger.Warn("editing message", ex);
                 // don't edit the message -- fixing this might take longer
-                return;
-            }
-
-            if (editResponse.Length != 0)
-            {
-                Retry(retry, () => EditMessage(messageID, message, bypassStfu, bypassFilters, customSmileys, retry + 1));
                 return;
             }
         }
