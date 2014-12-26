@@ -472,7 +472,10 @@ namespace VBCBBot
             try
             {
                 var doc = new XmlDocument();
-                doc.Load(new MemoryStream(response));
+                using (var strm = new MemoryStream(response))
+                {
+                    doc.Load(strm);
+                }
                 return doc;
             }
             catch (XmlException ex)
