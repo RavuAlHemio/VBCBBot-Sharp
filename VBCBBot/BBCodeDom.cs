@@ -158,14 +158,9 @@ namespace VBCBBot
             }
         }
 
-        public class TextNode : Node
+        public abstract class NodeWithText : Node
         {
-            public string Text { get; protected set; }
-
-            public TextNode(string text)
-            {
-                Text = text;
-            }
+            public abstract string Text { get; protected set; }
 
             public override bool IsText
             {
@@ -187,10 +182,26 @@ namespace VBCBBot
                     return Text;
                 }
             }
+
+            public NodeWithText(string text)
+            {
+                Text = text;
+            }
         }
 
-        public class SmileyTextNode : TextNode
+        public class TextNode : NodeWithText
         {
+            public override string Text { get; protected set; }
+
+            public TextNode(string text)
+                : base(text)
+            {
+            }
+        }
+
+        public class SmileyTextNode : NodeWithText
+        {
+            public override string Text { get; protected set; }
             public string SmileyUrl { get; protected set; }
 
             public SmileyTextNode(string smileyText, string smileyUrl)
