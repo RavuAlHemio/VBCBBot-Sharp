@@ -50,8 +50,6 @@ namespace VBCBBot
         private readonly IDictionary<string, UserIDAndNickname> _lowercaseUsernamesToUserIDNamePairs = new Dictionary<string, UserIDAndNickname>();
         private IDictionary<string, string> _forumSmileyCodesToURLs = new Dictionary<string, string>();
         private IDictionary<string, string> _forumSmileyURLsToCodes = new Dictionary<string, string>();
-        private readonly IDictionary<string, string> _customSmileyCodesToURLs = new Dictionary<string, string>();
-        private readonly IDictionary<string, string> _customSmileyURLsToCodes = new Dictionary<string, string>();
         private bool _initialSalvo = true;
         private string _securityToken = null;
         private long _lastMessageReceived = -1;
@@ -188,7 +186,7 @@ namespace VBCBBot
             };
         }
 
-        private IDictionary<string, string> SmileyCodesToURLs
+        public IDictionary<string, string> SmileyCodesToURLs
         {
             get
             {
@@ -197,7 +195,7 @@ namespace VBCBBot
                 {
                     ret[s.Key] = s.Value;
                 }
-                foreach (var s in _customSmileyCodesToURLs)
+                foreach (var s in ForumConfig.CustomSmileysToUrls)
                 {
                     ret[s.Key] = s.Value;
                 }
@@ -205,7 +203,7 @@ namespace VBCBBot
             }
         }
 
-        private IDictionary<string, string> SmileyURLsToCodes
+        public IDictionary<string, string> SmileyURLsToCodes
         {
             get
             {
@@ -214,7 +212,7 @@ namespace VBCBBot
                 {
                     ret[s.Key] = s.Value;
                 }
-                foreach (var s in _customSmileyURLsToCodes)
+                foreach (var s in ForumConfig.CustomUrlsToSmileys)
                 {
                     ret[s.Key] = s.Value;
                 }
@@ -845,7 +843,7 @@ namespace VBCBBot
         public string SubstituteCustomSmilies(string message)
         {
             var ret = new StringBuilder(message);
-            foreach (var smiley in _customSmileyCodesToURLs)
+            foreach (var smiley in ForumConfig.CustomSmileysToUrls)
             {
                 ret.Replace(smiley.Key, string.Format("[icon]{0}[/icon]", smiley.Value));
             }
