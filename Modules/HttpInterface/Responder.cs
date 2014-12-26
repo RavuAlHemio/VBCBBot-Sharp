@@ -18,7 +18,7 @@ namespace HttpInterface
         private static readonly ILog Logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         private static readonly Regex EditMessageRegex = new Regex("^/edit-message/(0|[1-9][0-9]*)$");
-        private static readonly Regex AllowedStaticPathFormat = new Regex("^[a-zA-Z0-9-.]$");
+        private static readonly Regex AllowedStaticPathFormat = new Regex("^[a-zA-Z0-9-.]+$");
 
         private HttpInterface _interface;
 
@@ -28,7 +28,6 @@ namespace HttpInterface
         private Guid? _authGuid;
         private string _staticPath;
         private string _templatePath;
-        private Context _emptyContext;
 
         public Responder(HttpInterface iface)
         {
@@ -47,7 +46,6 @@ namespace HttpInterface
 
             // set up DotLiquid
             Template.FileSystem = new LocalFileSystem(_templatePath);
-            _emptyContext = new Context();
         }
 
         public void Start()
@@ -84,12 +82,11 @@ namespace HttpInterface
             }
         }
 
-        protected void Send404(HttpListenerResponse response)
+        protected void Send404(HttpListenerResponse response, string message = "Not found.")
         {
-            var message = "Not found.";
             var messageBytes = Util.Utf8NoBom.GetBytes(message);
 
-            response.ContentType = "text/plain";
+            response.ContentType = "text/plain; charset=utf-8";
             response.ContentLength64 = messageBytes.LongLength;
             response.StatusCode = 404;
             response.StatusDescription = "Not Found";
@@ -107,12 +104,40 @@ namespace HttpInterface
             response.Close(htmlBytes, true);
         }
 
+        protected void SendOkPlainText(HttpListenerResponse response, string text)
+        {
+            var textBytes = Util.Utf8NoBom.GetBytes(text);
+
+            response.ContentType = "text/plain; charset=utf-8";
+            response.ContentLength64 = textBytes.LongLength;
+            response.StatusCode = 200;
+            response.StatusDescription = "OK";
+            response.Close(textBytes, true);
+        }
+
         protected Template LoadTemplate(string templateName)
         {
             using (var sr = new StreamReader(Path.Combine(_templatePath, templateName + ".liquid")))
             {
                 return Template.Parse(sr.ReadToEnd());
             }
+        }
+
+        protected Dictionary<string, string> GetPostValues(Stream stream)
+        {
+            using (var buf = new MemoryStream())
+            {
+                stream.CopyTo(buf);
+                return DomToHtml.DecodeUrlEncodedFormData(buf.ToArray(), Util.Utf8NoBom);
+            }
+        }
+
+        protected Hash NewPageHash()
+        {
+            return new Hash
+            {
+                { "myNickname", _interface.CBConnector.ForumConfig.Username }
+            };
         }
 
         protected virtual void HandleRequest(HttpListenerContext context)
@@ -126,12 +151,7 @@ namespace HttpInterface
             {
                 if (method == "POST")
                 {
-                    string loginPost;
-                    using (var reader = new StreamReader(context.Request.InputStream, Encoding.UTF8))
-                    {
-                        loginPost = reader.ReadToEnd();
-                    }
-                    var loginValues = DomToHtml.DecodeUrlEncodedFormData(loginPost, Util.Utf8NoBom);
+                    var loginValues = GetPostValues(context.Request.InputStream);
                     if (loginValues.ContainsKey("username") && loginValues.ContainsKey("password"))
                     {
                         if (loginValues["username"] == _interface.Config.Username && loginValues["password"] == _interface.Config.Password)
@@ -159,10 +179,44 @@ namespace HttpInterface
                 {
                     Send404(context.Response);
                 }
-                var ret = LoadTemplate("login").Render();
+                var vals = NewPageHash();
+                var ret = LoadTemplate("login").Render(vals);
                 SendOkHtml(context.Response, ret);
                 return;
             }
+            else if (path.StartsWith("/static/"))
+            {
+                var filePath = path.Substring(("/static/").Length);
+                if (!AllowedStaticPathFormat.IsMatch(filePath))
+                {
+                    Send404(context.Response);
+                    return;
+                }
+                var fullPath = Path.Combine(_staticPath, filePath);
+                if (!File.Exists(Path.Combine(_staticPath, filePath)))
+                {
+                    Send404(context.Response);
+                    return;
+                }
+
+                using (var mule = new MemoryStream())
+                {
+                    using (var inFile = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    {
+                        inFile.CopyTo(mule);
+                    }
+
+                    mule.Seek(0, SeekOrigin.Begin);
+
+                    context.Response.ContentLength64 = mule.Length;
+                    context.Response.StatusCode = 200;
+                    context.Response.StatusDescription = "OK";
+                    mule.CopyTo(context.Response.OutputStream);
+                }
+                context.Response.Close();
+                return;
+            }
+            // everything else requires authentication
             else if (!_authGuid.HasValue || authCookie == null || authCookie.Expired || authCookie.Value != _authGuid.Value.ToString("D"))
             {
                 // redirect to login page
@@ -188,7 +242,7 @@ namespace HttpInterface
             {
                 // assemble the quick-messages
                 var quickMessageString = new StringBuilder("<span class=\"quickmessagelist\">");
-                    foreach (var quickMessage in _interface.Config.QuickMessages)
+                foreach (var quickMessage in _interface.Config.QuickMessages)
                 {
                     quickMessageString.AppendFormat(
                         " <button type=\"button\" onclick=\"sendQuick('{0}')\">{1}</button>",
@@ -198,13 +252,41 @@ namespace HttpInterface
                 }
                 quickMessageString.Append("</span>");
 
-                var vars = new Hash
-                {
-                    {"myNickname", _interface.CBConnector.ForumConfig.Username},
-                    {"quickMessages", quickMessageString.ToString()}
-                };
+                var vars = NewPageHash();
+                vars["quickMessages"] = quickMessageString.ToString();
                 var ret = LoadTemplate("messages").Render(vars);
                 SendOkHtml(context.Response, ret);
+                return;
+            }
+            else if (path == "/smilies" && method == "GET")
+            {
+                var smileyString = new StringBuilder("<span class=\"smileylist\">");
+                smileyString.Append("<button type=\"button\" onclick=\"hideSmilies()\">Hide!</button>");
+
+                var smileyCodesToUrls = new SortedDictionary<string, string>(_interface.CBConnector.SmileyCodesToURLs);
+                foreach (var smileyCodeAndUrl in smileyCodesToUrls)
+                {
+                    smileyString.Append(' ');
+                    smileyString.Append("<span class=\"smiley\">");
+                    smileyString.AppendFormat(
+                        "<a class=\"jsclick\" onclick=\"smileyClicked('{0}')\">",
+                        DomToHtml.HtmlEscape(
+                            DomToHtml.JsEscapeString(smileyCodeAndUrl.Key, escapeQuotes: false, escapeApostrophes: true),
+                            escapeQuotes: true,
+                            escapeApostrophes: false
+                        )
+                    );
+                    smileyString.AppendFormat(
+                        "<img class=\"smiley picksmiley\" src=\"{0}\" title=\"{1}\"/>",
+                        DomToHtml.HtmlEscape(new Uri(_interface.CBConnector.ForumConfig.Url, smileyCodeAndUrl.Value)),
+                        DomToHtml.HtmlEscape(smileyCodeAndUrl.Key)
+                    );
+                    smileyString.Append("</a>");
+                    smileyString.Append("</span>");
+                }
+                smileyString.Append("</span>");
+
+                SendOkHtml(context.Response, smileyString.ToString());
                 return;
             }
             else if (path == "/messages" && method == "GET")
@@ -226,7 +308,7 @@ namespace HttpInterface
                         var msgHash = new Hash
                         {
                             { "time", message.Timestamp.ToString("yyyy-MM-dd HH:mm") },
-                            { "messageID", message.ID },
+                            { "messageID", message.ID.ToString() },
                             { "senderInfoURL", senderInfoUrl.ToString() },
                             { "senderNameHTML", senderName },
                             { "body", body }
@@ -241,44 +323,68 @@ namespace HttpInterface
             }
             else if ((match = EditMessageRegex.Match(path)).Success)
             {
+                long messageID;
+                if (!long.TryParse(match.Groups[1].Value, out messageID))
+                {
+                    Send404(context.Response, "Message ID out of range.");
+                    return;
+                }
+
                 if (method == "GET")
                 {
-                    // TODO: show editing form
+                    ChatboxMessage messageToEdit;
+                    lock (_interface.MessageList)
+                    {
+                        var nodeToEdit = _interface.MessageList.Find(m => m.ID == messageID);
+                        messageToEdit = (nodeToEdit == null) ? null : nodeToEdit.Value;
+                    }
+
+                    if (messageToEdit == null)
+                    {
+                        Send404(context.Response, "Message not found.");
+                        return;
+                    }
+
+                    var currentBody = messageToEdit.BodyBBCode;
+                    var vars = NewPageHash();
+                    vars["messageID"] = messageID.ToString();
+                    vars["messageBody"] = currentBody;
+                    var ret = LoadTemplate("editmessage").Render(vars);
+                    SendOkHtml(context.Response, ret);
+                    return;
                 }
                 else if (method == "POST")
                 {
-                    // TODO: edit message
+                    var postValues = GetPostValues(context.Request.InputStream);
+                    if (!postValues.ContainsKey("newbody"))
+                    {
+                        SendOkPlainText(context.Response, "You must supply a new body to edit in.");
+                        return;
+                    }
+
+                    // send
+                    _interface.CBConnector.EditMessage(messageID, postValues["newbody"], customSmileys: true);
+
+                    // redirect back to list
+                    context.Response.Redirect(new Uri(context.Request.Url, "/").ToString());
+                    context.Response.Close();
+                    return;
                 }
             }
             else if (path == "/post" && method == "POST")
             {
-                // TODO: post message
-            }
-            else if (path.StartsWith("/static/"))
-            {
-                var filePath = path.Substring(("/static/").Length);
-                if (!AllowedStaticPathFormat.IsMatch(filePath))
+                var postValues = GetPostValues(context.Request.InputStream);
+                if (!postValues.ContainsKey("message") || string.IsNullOrWhiteSpace(postValues["message"]))
                 {
-                    Send404(context.Response);
-                    return;
-                }
-                var fullPath = Path.Combine(_staticPath, filePath);
-                if (!File.Exists(Path.Combine(_staticPath, filePath)))
-                {
-                    Send404(context.Response);
+                    SendOkPlainText(context.Response, "You must supply a message to send.");
                     return;
                 }
 
-                var mule = new MemoryStream();
-                using (var inFile = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                {
-                    inFile.CopyTo(mule);
-                }
+                // send
+                _interface.CBConnector.SendMessage(postValues["message"], customSmileys: true);
 
-                context.Response.ContentLength64 = mule.Length;
-                context.Response.StatusCode = 200;
-                context.Response.StatusDescription = "OK";
-                mule.CopyTo(context.Response.OutputStream);
+                // redirect back to list
+                context.Response.Redirect(new Uri(context.Request.Url, "/").ToString());
                 context.Response.Close();
                 return;
             }

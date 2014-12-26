@@ -77,21 +77,21 @@ namespace HttpInterface
             return ret.ToString();
         }
 
-        public static Dictionary<string, string> DecodeUrlEncodedFormData(string postString, Encoding encoding)
+        public static Dictionary<string, string> DecodeUrlEncodedFormData(byte[] postBytes, Encoding encoding)
         {
             var ret = new Dictionary<string, string>();
 
-            var keyValueStrings = postString.Split('&');
-            foreach (var keyValueString in keyValueStrings)
+            var keyValueByteArrays = postBytes.Split(new [] {(byte)'&'});
+            foreach (var keyValueByteArray in keyValueByteArrays)
             {
-                var keyAndValue = keyValueString.Split(new [] { '=' }, 1);
-                if (keyAndValue.Length != 2)
+                var keyAndValue = keyValueByteArray.Split(new [] { (byte)'=' }, 2).ToList();
+                if (keyAndValue.Count != 2)
                 {
                     continue;
                 }
 
-                var key = Util.UrlDecodeString(keyAndValue[0], Util.Utf8NoBom);
-                var value = Util.UrlDecodeString(keyAndValue[1], Util.Utf8NoBom);
+                var key = Util.UrlDecodeToString(keyAndValue[0], Util.Utf8NoBom);
+                var value = Util.UrlDecodeToString(keyAndValue[1], Util.Utf8NoBom, plusIsSpace: true);
                 ret[key] = value;
             }
 
@@ -105,6 +105,7 @@ namespace HttpInterface
             {
                 var elem = node as BBCodeDom.Element;
                 var smt = node as BBCodeDom.SmileyTextNode;
+                var nwt = node as BBCodeDom.NodeWithText;
 
                 if (elem != null)
                 {
@@ -118,9 +119,12 @@ namespace HttpInterface
                     }
                     else if (elem.Name == "icon")
                     {
+                        var iconUrl = string.Concat(elem.Children.Select(n =>
+                            n is BBCodeDom.NodeWithText ? ((BBCodeDom.NodeWithText)n).Text : ""
+                        ));
                         ret.AppendFormat(
                             "<a class=\"tag-icon iconlink\" href=\"{0}\"><img class=\"tag-icon icon\" src=\"{0}\" /></a>",
-                            HtmlEscape(new Uri(baseUrl, elem.AttributeValue))
+                            HtmlEscape(new Uri(baseUrl, iconUrl))
                         );
                     }
                     else if (elem.Name == "b" || elem.Name == "i" || elem.Name == "u")
@@ -169,7 +173,7 @@ namespace HttpInterface
                     }
                     else if (elem.Name == "noparse")
                     {
-                        ret.Append(HtmlEscape(string.Concat(elem.Children.Select(c => c.ToString()))));
+                        ret.Append(HtmlEscape(string.Concat(elem.Children.Select(c => c.BBCodeString))));
                     }
                     else if (elem.Name == "tex")
                     {
@@ -186,6 +190,10 @@ namespace HttpInterface
                         HtmlEscape(new Uri(baseUrl, smt.SmileyUrl)),
                         HtmlEscape(smt.Text)
                     );
+                }
+                else if (nwt != null)
+                {
+                    ret.Append(HtmlEscape(t.Text));
                 }
                 else
                 {

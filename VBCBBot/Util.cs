@@ -178,7 +178,7 @@ namespace VBCBBot
             return ret.ToString();
         }
 
-        public static byte? DecodeHexNybble(char c)
+        public static byte? DecodeHexNybble(byte c)
         {
             if (c >= '0' && c <= '9')
             {
@@ -195,44 +195,52 @@ namespace VBCBBot
             return null;
         }
 
-        public static byte[] UrlDecode(string urlEncodedString)
+        public static byte[] UrlDecode(byte[] urlEncodedBytes, bool plusIsSpace = false)
         {
             var ret = new List<byte>();
             var percentDecodingState = 0;
-            char topNybbleChar = '\0';
+            byte topNybbleByte = 0;
 
-            foreach (var c in urlEncodedString)
+            foreach (var b in urlEncodedBytes)
             {
                 if (percentDecodingState == 1)
                 {
                     // percent escape, top nybble
-                    topNybbleChar = c;
+                    topNybbleByte = b;
                     percentDecodingState = 2;
                 }
                 else if (percentDecodingState == 2)
                 {
                     // percent escape, bottom nybble
-                    char bottomNybbleChar = c;
-                    byte? topNybble = DecodeHexNybble(topNybbleChar);
-                    byte? bottomNybble = DecodeHexNybble(bottomNybbleChar);
+                    byte bottomNybbleByte = b;
+                    byte? topNybble = DecodeHexNybble(topNybbleByte);
+                    byte? bottomNybble = DecodeHexNybble(bottomNybbleByte);
 
                     if (!topNybble.HasValue || !bottomNybble.HasValue)
                     {
                         // add this "escape" verbatim
                         ret.Add((byte)'%');
-                        ret.Add((byte)topNybbleChar);
-                        ret.Add((byte)bottomNybbleChar);
-                        percentDecodingState = 0;
+                        ret.Add(topNybbleByte);
+                        ret.Add(bottomNybbleByte);
                     }
+                    else
+                    {
+                        ret.Add((byte)((topNybble.Value << 4) | bottomNybble.Value));
+                    }
+                    percentDecodingState = 0;
                 }
-                else if (c == '%')
+                else if (b == '%')
                 {
                     // start of a percent escape!
                     percentDecodingState = 1;
                 }
+                else if (plusIsSpace && b == '+')
+                {
+                    ret.Add((byte)' ');
+                }
                 else
                 {
-                    ret.Add((byte)c);
+                    ret.Add(b);
                 }
             }
 
@@ -247,15 +255,15 @@ namespace VBCBBot
                 // string ends with "%x"
                 // append verbatim
                 ret.Add((byte)'%');
-                ret.Add((byte)topNybbleChar);
+                ret.Add((byte)topNybbleByte);
             }
 
             return ret.ToArray();
         }
 
-        public static string UrlDecodeString(string urlEncodedString, Encoding charset)
+        public static string UrlDecodeToString(byte[] urlEncodedBytes, Encoding charset, bool plusIsSpace = false)
         {
-            return charset.GetString(UrlDecode(urlEncodedString));
+            return charset.GetString(UrlDecode(urlEncodedBytes, plusIsSpace));
         }
 
         public static DateTime? UnixTimestampStringToLocalDateTime(string unixTimestampString)
@@ -348,6 +356,91 @@ namespace VBCBBot
         public static DateTime ToLocalTimeFromDatabase(this DateTime dt)
         {
             return DateTime.SpecifyKind(dt, DateTimeKind.Utc).ToLocalTime();
+        }
+
+        public static LinkedListNode<T> Find<T>(this LinkedList<T> list, Predicate<T> pred)
+        {
+            for (var node = list.First; node != null; node = node.Next)
+            {
+                if (pred(node.Value))
+                {
+                    return node;
+                }
+            }
+            return null;
+        }
+
+        public static bool StartsWith<T>(this IList<T> haystack, IList<T> needle)
+        {
+            if (needle.Count > haystack.Count)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < needle.Count; ++i)
+            {
+                if (!object.Equals(haystack[i], needle[i]))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        public static bool EndsWith<T>(this IList<T> haystack, IList<T> needle)
+        {
+            var haystackOffset = haystack.Count - needle.Count;
+            if (haystackOffset < 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < needle.Count; ++i)
+            {
+                if (!object.Equals(haystack[haystackOffset + i], needle[i]))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        public static IEnumerable<T[]> Split<T>(this IList<T> arr, IList<T> separator, int maxCount = -1)
+        {
+            if (maxCount == 0)
+            {
+                yield break;
+            }
+
+            var current = new List<T>();
+            int currentCount = 1;
+            bool clearance = false;
+
+            foreach (var elem in arr)
+            {
+                current.Add(elem);
+
+                if (!clearance && current.EndsWith(separator))
+                {
+                    current.RemoveRange(current.Count - separator.Count, separator.Count);
+                    yield return current.ToArray();
+
+                    ++currentCount;
+                    if (maxCount >= 0 && currentCount >= maxCount)
+                    {
+                        // put all the remaining elements into one array
+                        clearance = true;
+                    }
+
+                    current.Clear();
+                }
+            }
+
+            // if the separator has a length, this causes an empty element to appear at the end
+            if (separator.Count > 0)
+            {
+                yield return current.ToArray();
+            }
         }
     }
 }

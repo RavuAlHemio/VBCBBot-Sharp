@@ -1,8 +1,8 @@
 ﻿{% extends "base" %}
-{% block title %}Edit message {{ messageID | escape }} &ndash; Chatbox{% endblock %}
+{% block title %}Edit message {{ messageID | escape }}{% endblock %}
 {% block body %}
   <form action="/edit-message/{{ messageID | escape }}" method="POST">
-    <p><textarea name="new_body" id="messageinput" class="textinput">{{ messageBody | escape }}</textarea></p>
+    <p><textarea name="newbody" id="messageinput" class="textinput">{{ messageBody | escape }}</textarea></p>
     <p><button type="submit" id="sendbutton">Edit</button></p>
   </form>
   <script type="text/javascript">

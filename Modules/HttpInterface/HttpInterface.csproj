@@ -60,8 +60,11 @@
     <None Include="Templates\login.liquid" />
     <None Include="Templates\messages.liquid" />
     <None Include="Templates\post.liquid" />
+    <None Include="Static\common.js" />
+    <None Include="Static\style.css" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Templates\" />
+    <Folder Include="Static\" />
   </ItemGroup>
 </Project>
