@@ -1,0 +1,6 @@
+﻿<p class="post">
+  [<span class="timestamp">{{ time | escape }}</span>]
+  <span class="editlink"><a href="/edit-message/{{ messageID | escape }}">&#9998;</a></span>
+  &lt;<span class="sendername"><a href="{{ senderInfoURL | escape }}">{{ senderNameHTML }}</a></span>&gt;
+  <span class="messagebody">{{ body }}</span>
+</p>

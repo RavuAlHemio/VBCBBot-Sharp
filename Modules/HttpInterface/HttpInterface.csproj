@@ -43,6 +43,8 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="HttpInterface.cs" />
     <Compile Include="DomToHtml.cs" />
+    <Compile Include="Responder.cs" />
+    <Compile Include="InterfaceConfig.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
@@ -53,5 +55,13 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="Templates\_base.liquid" />
+    <None Include="Templates\editmessage.liquid" />
+    <None Include="Templates\login.liquid" />
+    <None Include="Templates\messages.liquid" />
+    <None Include="Templates\post.liquid" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Templates\" />
   </ItemGroup>
 </Project>

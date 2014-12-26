@@ -178,6 +178,86 @@ namespace VBCBBot
             return ret.ToString();
         }
 
+        public static byte? DecodeHexNybble(char c)
+        {
+            if (c >= '0' && c <= '9')
+            {
+                return (byte)(c - '0');
+            }
+            if (c >= 'A' && c <= 'F')
+            {
+                return (byte)(c - 'A' + 10);
+            }
+            if (c >= 'a' && c <= 'f')
+            {
+                return (byte)(c - 'a' + 10);
+            }
+            return null;
+        }
+
+        public static byte[] UrlDecode(string urlEncodedString)
+        {
+            var ret = new List<byte>();
+            var percentDecodingState = 0;
+            char topNybbleChar = '\0';
+
+            foreach (var c in urlEncodedString)
+            {
+                if (percentDecodingState == 1)
+                {
+                    // percent escape, top nybble
+                    topNybbleChar = c;
+                    percentDecodingState = 2;
+                }
+                else if (percentDecodingState == 2)
+                {
+                    // percent escape, bottom nybble
+                    char bottomNybbleChar = c;
+                    byte? topNybble = DecodeHexNybble(topNybbleChar);
+                    byte? bottomNybble = DecodeHexNybble(bottomNybbleChar);
+
+                    if (!topNybble.HasValue || !bottomNybble.HasValue)
+                    {
+                        // add this "escape" verbatim
+                        ret.Add((byte)'%');
+                        ret.Add((byte)topNybbleChar);
+                        ret.Add((byte)bottomNybbleChar);
+                        percentDecodingState = 0;
+                    }
+                }
+                else if (c == '%')
+                {
+                    // start of a percent escape!
+                    percentDecodingState = 1;
+                }
+                else
+                {
+                    ret.Add((byte)c);
+                }
+            }
+
+            if (percentDecodingState == 1)
+            {
+                // string ends with "%"
+                // append verbatim
+                ret.Add((byte)'%');
+            }
+            else if (percentDecodingState == 2)
+            {
+                // string ends with "%x"
+                // append verbatim
+                ret.Add((byte)'%');
+                ret.Add((byte)topNybbleChar);
+            }
+
+            return ret.ToArray();
+        }
+
+        public static string UrlDecodeString(string urlEncodedString, Encoding charset)
+        {
+            return charset.GetString(UrlDecode(urlEncodedString));
+        }
+
         public static DateTime? UnixTimestampStringToLocalDateTime(string unixTimestampString)
         {
             // try parsing timestamp

@@ -77,6 +77,27 @@ namespace HttpInterface
             return ret.ToString();
         }
 
+        public static Dictionary<string, string> DecodeUrlEncodedFormData(string postString, Encoding encoding)
+        {
+            var ret = new Dictionary<string, string>();
+
+            var keyValueStrings = postString.Split('&');
+            foreach (var keyValueString in keyValueStrings)
+            {
+                var keyAndValue = keyValueString.Split(new [] { '=' }, 1);
+                if (keyAndValue.Length != 2)
+                {
+                    continue;
+                }
+
+                var key = Util.UrlDecodeString(keyAndValue[0], Util.Utf8NoBom);
+                var value = Util.UrlDecodeString(keyAndValue[1], Util.Utf8NoBom);
+                ret[key] = value;
+            }
+
+            return ret;
+        }
+
         public static string Convert(IEnumerable<BBCodeDom.Node> bodyDom, Uri baseUrl)
         {
             var ret = new StringBuilder();

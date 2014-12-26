@@ -64,6 +64,13 @@ namespace VBCBBot
                     return ret;
                 }
             }
+
+            public ForumConfig()
+            {
+                _bannedUsers = new HashSet<string>();
+                LowercaseBannedUsers = new HashSet<string>();
+                CustomSmileysToUrls = new Dictionary<string, string>();
+            }
         }
 
         [JsonObject]

@@ -1,0 +1,26 @@
+﻿{% extends "base" %}
+{% block title %}{{ myNickname | escape }} &ndash; Chatbox{% endblock %}
+{% block addhead %}
+  <script type="text/x-matchjax-config">
+    MathJax.Hub.Config({
+      jax: ["input/TeX", "output/HTML-CSS"],
+      "HTML-CSS": { availableFonts: ["TeX"] }
+    });
+  </script>
+  <script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js" type="text/javascript"></script>
+{% endblock %}
+{% block body %}
+  <form action="/post" method="POST">
+    <p><textarea name="message" id="messageinput" class="textinput"></textarea></p>
+    <p><button type="submit" id="sendbutton">Send</button></p>
+  </form>
+  <p><span id="smilies"><button type="button" onclick="fetchSmilies()">Smile!</button></span> {{ quickMessages }}</p>
+  <div id="messages">
+  Fetching...
+  </div>
+  <script type="text/javascript">
+  markTextAreaAsResizableEnterSubmit('messageinput');
+  window.setTimeout('fetchMessages()', 500);
+  window.setTimeout("document.getElementById('messageinput').focus()", 600);
+  </script>
+{% endblock %}
