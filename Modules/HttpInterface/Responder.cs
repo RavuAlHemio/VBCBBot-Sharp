@@ -140,6 +140,23 @@ namespace HttpInterface
             };
         }
 
+        protected virtual void ActUponSuccessfulLogin(HttpListenerContext context)
+        {
+            if (!_authGuid.HasValue)
+            {
+                _authGuid = Guid.NewGuid();
+            }
+            var newAuthCookie = new Cookie
+            {
+                Name = "VBCBBotAuth",
+                Value = _authGuid.Value.ToString("D"),
+                Expires = DateTime.Now.AddDays(365)
+            };
+            context.Response.SetCookie(newAuthCookie);
+            context.Response.Redirect(new Uri(context.Request.Url, "/").ToString());
+            context.Response.Close();
+        }
+
         protected virtual void HandleRequest(HttpListenerContext context)
         {
             Match match;
@@ -156,19 +173,7 @@ namespace HttpInterface
                     {
                         if (loginValues["username"] == _interface.Config.Username && loginValues["password"] == _interface.Config.Password)
                         {
-                            if (!_authGuid.HasValue)
-                            {
-                                _authGuid = Guid.NewGuid();
-                            }
-                            var newAuthCookie = new Cookie
-                            {
-                                Name = "VBCBBotAuth",
-                                Value = _authGuid.Value.ToString("D"),
-                                Expires = DateTime.Now.AddDays(365)
-                            };
-                            context.Response.SetCookie(newAuthCookie);
-                            context.Response.Redirect(new Uri(context.Request.Url, "/").ToString());
-                            context.Response.Close();
+                            ActUponSuccessfulLogin(context);
                             return;
                         }
                     }
@@ -182,6 +187,22 @@ namespace HttpInterface
                 var vals = NewPageHash();
                 var ret = LoadTemplate("login").Render(vals);
                 SendOkHtml(context.Response, ret);
+                return;
+            }
+            else if (path.StartsWith("/devicelogin/"))
+            {
+                // (don't mind about HTTP method here)
+
+                var deviceAccessCode = path.Substring(("/devicelogin/").Length);
+                if (_interface.Config.DeviceAccessCodes.Contains(deviceAccessCode))
+                {
+                    ActUponSuccessfulLogin(context);
+                    return;
+                }
+
+                // redirect to login page
+                context.Response.Redirect(new Uri(context.Request.Url, "/login").ToString());
+                context.Response.Close();
                 return;
             }
             else if (path.StartsWith("/static/"))

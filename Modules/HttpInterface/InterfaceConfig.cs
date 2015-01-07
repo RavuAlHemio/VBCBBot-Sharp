@@ -15,6 +15,7 @@ namespace HttpInterface
         public List<string> QuickMessages { get; set; }
         public string TemplateDirectory { get; set; }
         public string StaticDirectory { get; set; }
+        public HashSet<string> DeviceAccessCodes { get; set; }
 
         public InterfaceConfig(JObject obj)
         {
@@ -22,6 +23,7 @@ namespace HttpInterface
             QuickMessages = new List<string>();
             TemplateDirectory = "HttpTemplates";
             StaticDirectory = "HttpStatic";
+            DeviceAccessCodes = new HashSet<string>();
 
             var ser = new JsonSerializer();
             ser.Populate(obj.CreateReader(), this);
