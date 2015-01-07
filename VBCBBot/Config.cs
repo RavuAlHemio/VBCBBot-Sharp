@@ -15,6 +15,7 @@ namespace VBCBBot
             public string Username;
             public string Password;
             public double RefreshTime;
+            public bool UtcTime;
 
             [JsonProperty("Url")]
             public string UrlString

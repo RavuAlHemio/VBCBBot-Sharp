@@ -664,7 +664,7 @@ namespace VBCBBot
                         timeString,
                         "dd-MM-yy, HH:mm",
                         CultureInfo.InvariantCulture,
-                        DateTimeStyles.AssumeLocal,
+                        ForumConfig.UtcTime ? DateTimeStyles.AssumeUniversal : DateTimeStyles.AssumeLocal,
                         out parsed
                     ))
                     {
@@ -769,17 +769,21 @@ namespace VBCBBot
                 {
                     Logger.WarnFormat("exception fetching messages; penalty coefficient is {0}\n{1}", penaltyCoefficient, ex);
                 }
-                try
+
+                if (!ForumConfig.UtcTime)
                 {
-                    PotentialDSTFix();
-                }
-                catch (Exception ex)
-                {
-                    Logger.WarnFormat("potential DST fix failed\n{0}", ex);
+                    try
+                    {
+                        PotentialDSTFix();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.WarnFormat("potential DST fix failed\n{0}", ex);
+                    }
                 }
 
                 ++penaltyCoefficient;
-                    Thread.Sleep(TimeSpan.FromSeconds(TimeBetweenReads * penaltyCoefficient));
+                Thread.Sleep(TimeSpan.FromSeconds(TimeBetweenReads * penaltyCoefficient));
             }
         }
 
