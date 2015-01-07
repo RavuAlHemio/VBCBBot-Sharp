@@ -74,7 +74,7 @@ namespace HttpInterface
                     {
                         HandleRequest(ctx);
                     }
-                    catch (WebException exc)
+                    catch (Exception exc)
                     {
                         Logger.Error("handling request failed", exc);
                     }
@@ -150,7 +150,8 @@ namespace HttpInterface
             {
                 Name = "VBCBBotAuth",
                 Value = _authGuid.Value.ToString("D"),
-                Expires = DateTime.Now.AddDays(365)
+                Expires = DateTime.Now.AddDays(365),
+                Path = "/"
             };
             context.Response.SetCookie(newAuthCookie);
             context.Response.Redirect(new Uri(context.Request.Url, "/").ToString());
