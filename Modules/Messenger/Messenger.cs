@@ -661,7 +661,12 @@ namespace Messenger
                 if (moveToReplay)
                 {
                     // place the messages on the repeat heap
-                    ctx.ReplayableMessages.AddRange(messages.Select(m => new ReplayableMessage(m)));
+                    ctx.ReplayableMessages.AddRange(messages.Select(
+                        m => new ReplayableMessage(m)
+                        {
+                            Timestamp = m.Timestamp.ToUniversalTimeForDatabase()
+                        }
+                    ));
                 }
 
                 // purge the repeat heap if necessary
