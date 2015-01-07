@@ -193,7 +193,7 @@ namespace HttpInterface
                 }
                 else if (nwt != null)
                 {
-                    ret.Append(HtmlEscape(t.Text));
+                    ret.Append(HtmlEscape(nwt.Text));
                 }
                 else
                 {
