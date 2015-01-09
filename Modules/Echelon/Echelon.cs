@@ -102,7 +102,7 @@ namespace Echelon
                 return;
             }
                     
-            var username = spyMatch.Groups[1].Success ? spyMatch.Groups[1].Value.Trim() : null;
+            var username = spyMatch.Groups[1].Success ? spyMatch.Groups[1].Value.Trim().ToLowerInvariant() : null;
             var regex = spyMatch.Groups[2].Value.Trim();
 
             using (var ctx = GetNewContext())
