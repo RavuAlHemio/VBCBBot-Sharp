@@ -14,6 +14,9 @@ namespace Echelon
     public class Echelon : ModuleV1
     {
         private static readonly Regex SpyTrigger = new Regex("^!echelon trigger(?:all | ([^;]+)[;])(.+)$");
+        private static readonly Regex ModifySpyTrigger = new Regex("^!echelon modtrigger (0|[1-9][0-9]*)[;]([^;]+)[;](.+)$");
+        private static readonly Regex ModifySpyAllTrigger = new Regex("^!echelon modtriggerall (0|[1-9][0-9]*)[;](.+)$");
+        private static readonly Regex DeleteSpyTrigger = new Regex("^!echelon (un)?deltrigger (0|[1-9][0-9]*)$");
         private static readonly Regex StatsTrigger = new Regex("^!echelon incidents (.+)$");
 
         private EchelonConfig _config;
@@ -32,6 +35,9 @@ namespace Echelon
             return new EchelonContext(conn);
         }
 
+        /// <summary>
+        /// Checks whether ECHELON statistics for a user were requested and potentially displays them.
+        /// </summary>
         protected void PotentialStats(ChatboxMessage message)
         {
             var statsMatch = StatsTrigger.Match(message.BodyBBCode);
@@ -85,6 +91,9 @@ namespace Echelon
             }
         }
 
+        /// <summary>
+        /// Checks whether a new ECHELON trigger is to be added and potentially does so.
+        /// </summary>
         protected void PotentialSpy(ChatboxMessage message)
         {
             var spyMatch = SpyTrigger.Match(message.BodyBBCode);
@@ -105,6 +114,7 @@ namespace Echelon
             var username = spyMatch.Groups[1].Success ? spyMatch.Groups[1].Value.Trim().ToLowerInvariant() : null;
             var regex = spyMatch.Groups[2].Value.Trim();
 
+            long newTriggerID;
             using (var ctx = GetNewContext())
             {
                 var trig = new Trigger
@@ -115,11 +125,141 @@ namespace Echelon
                 };
                 ctx.Triggers.Add(trig);
                 ctx.SaveChanges();
+                newTriggerID = trig.Id;
             }
 
             Connector.SendMessage(string.Format(
-                "Spymaster [noparse]{0}[/noparse]: Done.",
+                "Spymaster [noparse]{0}[/noparse]: Done (#{1}).",
+                message.UserName,
+                newTriggerID
+            ));
+        }
+
+        /// <summary>
+        /// Checks whether an existing ECHELON trigger is to be modified and potentially does so.
+        /// </summary>
+        protected void PotentialModifySpy(ChatboxMessage message)
+        {
+            var modMatch = ModifySpyTrigger.Match(message.BodyBBCode);
+            var modMatchAll = ModifySpyAllTrigger.Match(message.BodyBBCode);
+
+            long triggerID;
+            string triggerUsernameLower;
+            string triggerRegex;
+
+            if (modMatch.Success)
+            {
+                triggerID = long.Parse(modMatch.Groups[1].Value);
+                triggerUsernameLower = modMatch.Groups[2].Value.Trim().ToLowerInvariant();
+                triggerRegex = modMatch.Groups[3].Value.Trim();
+            }
+            else if (modMatchAll.Success)
+            {
+                triggerID = long.Parse(modMatchAll.Groups[1].Value);
+                triggerUsernameLower = null;
+                triggerRegex = modMatchAll.Groups[2].Value.Trim();
+            }
+            else
+            {
+                return;
+            }
+
+            if (!_config.Spymasters.Contains(message.UserName))
+            {
+                Connector.SendMessage(string.Format(
+                    "Agent [noparse]{0}[/noparse]: Your rank is insufficient for this operation.",
+                    message.UserName
+                ));
+                return;
+            }
+
+            using (var ctx = GetNewContext())
+            {
+                var trig = ctx.Triggers.FirstOrDefault(t => t.Id == triggerID);
+                if (trig == null)
+                {
+                    Connector.SendMessage(string.Format(
+                        "Spymaster [noparse]{0}[/noparse]: The trigger with this ID does not exist.",
+                        message.UserName
+                    ));
+                    return;
+                }
+
+                trig.TargetNameLower = triggerUsernameLower;
+                trig.Regex = triggerRegex;
+                trig.SpymasterName = message.UserName;
+
+                ctx.SaveChanges();
+            }
+
+            Connector.SendMessage(string.Format(
+                "Spymaster [noparse]{0}[/noparse]: Updated.",
                 message.UserName
+            ));
+        }
+
+        /// <summary>
+        /// Checks whether an existing ECHELON trigger is to be deleted or undeleted and potentially does so.
+        /// </summary>
+        protected void PotentialDeleteSpy(ChatboxMessage message)
+        {
+            var delMatch = DeleteSpyTrigger.Match(message.BodyBBCode);
+            if (!delMatch.Success)
+            {
+                return;
+            }
+
+            if (!_config.Spymasters.Contains(message.UserName))
+            {
+                Connector.SendMessage(string.Format(
+                    "Agent [noparse]{0}[/noparse]: Your rank is insufficient for this operation.",
+                    message.UserName
+                ));
+                return;
+            }
+
+            var undelete = delMatch.Groups[1].Success;
+            var triggerID = long.Parse(delMatch.Groups[2].Value);
+
+            using (var ctx = GetNewContext())
+            {
+                var trig = ctx.Triggers.FirstOrDefault(t => t.Id == triggerID);
+                if (trig == null)
+                {
+                    Connector.SendMessage(string.Format(
+                        "Spymaster [noparse]{0}[/noparse]: The trigger with this ID does not exist.",
+                        message.UserName
+                    ));
+                    return;
+                }
+
+                if (trig.Deactivated && !undelete)
+                {
+                    Connector.SendMessage(string.Format(
+                        "Spymaster [noparse]{0}[/noparse]: The trigger with this ID is already deleted.",
+                        message.UserName
+                    ));
+                    return;
+                }
+                else if (!trig.Deactivated && undelete)
+                {
+                    Connector.SendMessage(string.Format(
+                        "Spymaster [noparse]{0}[/noparse]: The trigger with this ID is still active.",
+                        message.UserName
+                    ));
+                    return;
+                }
+
+                trig.Deactivated = !undelete;
+                trig.SpymasterName = message.UserName;
+
+                ctx.SaveChanges();
+            }
+
+            Connector.SendMessage(string.Format(
+                "Spymaster [noparse]{0}[/noparse]: {1}.",
+                message.UserName,
+                undelete ? "Undeleted" : "Deleted"
             ));
         }
 
@@ -134,6 +274,8 @@ namespace Echelon
             {
                 PotentialStats(message);
                 PotentialSpy(message);
+                PotentialModifySpy(message);
+                PotentialDeleteSpy(message);
             }
 
             // spy on messages from banned users too
@@ -141,7 +283,7 @@ namespace Echelon
             var lowerSenderName = message.UserName.ToLowerInvariant();
             using (var ctx = GetNewContext())
             {
-                var relevantTriggers = ctx.Triggers.Where(t => t.TargetNameLower == null || t.TargetNameLower == lowerSenderName);
+                var relevantTriggers = ctx.Triggers.Where(t => !t.Deactivated && (t.TargetNameLower == null || t.TargetNameLower == lowerSenderName));
                 foreach (var trigger in relevantTriggers)
                 {
                     var re = trigger.Regex;
