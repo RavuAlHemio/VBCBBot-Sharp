@@ -27,7 +27,7 @@ namespace Allograph
                 return;
             }
 
-            var originalBody = message.BodyBBCode;
+            var originalBody = Util.RemoveControlCharactersAndStrip(message.BodyBBCode);
             var newBody = originalBody;
 
             foreach (var repl in _config.Replacements)
