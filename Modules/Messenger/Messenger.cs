@@ -484,7 +484,7 @@ namespace Messenger
             }
             else if (command == "unignore")
             {
-                if (isIgnored)
+                if (!isIgnored)
                 {
                     Connector.SendMessage(string.Format(
                         "[noparse]{0}[/noparse]: You have not been ignoring [i][noparse]{1}[/noparse][/i].",
