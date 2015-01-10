@@ -334,18 +334,24 @@ namespace VBCBBot
             return changeMe.ToString();
         }
 
-        public static string RemoveControlCharactersAndStrip(string text)
+        public static string RemoveControlCharacters(string text)
         {
             var ret = new StringBuilder();
             foreach (var cp in StringToCodePointStrings(text))
             {
-                if (char.GetUnicodeCategory(cp, 0) == UnicodeCategory.Control)
+                var cat = char.GetUnicodeCategory(cp, 0);
+                if (cat == UnicodeCategory.Control || cat == UnicodeCategory.Format)
                 {
                     continue;
                 }
                 ret.Append(cp);
             }
-            return ret.ToString().Trim();
+            return ret.ToString();
+        }
+
+        public static string RemoveControlCharactersAndStrip(string text)
+        {
+            return RemoveControlCharacters(text).Trim();
         }
 
         public static DateTime ToUniversalTimeForDatabase(this DateTime dt)
