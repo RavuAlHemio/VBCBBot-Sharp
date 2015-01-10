@@ -770,7 +770,7 @@ namespace VBCBBot
                     Logger.WarnFormat("exception fetching messages; penalty coefficient is {0}\n{1}", penaltyCoefficient, ex);
                 }
 
-                if (!ForumConfig.UtcTime)
+                if (!ForumConfig.UtcTime && ForumConfig.DSTCorrection)
                 {
                     try
                     {

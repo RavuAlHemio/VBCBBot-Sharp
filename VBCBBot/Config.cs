@@ -16,6 +16,7 @@ namespace VBCBBot
             public string Password;
             public double RefreshTime;
             public bool UtcTime;
+            public bool DSTCorrection;
 
             [JsonProperty("Url")]
             public string UrlString
@@ -68,6 +69,7 @@ namespace VBCBBot
 
             public ForumConfig()
             {
+                DSTCorrection = true;
                 _bannedUsers = new HashSet<string>();
                 LowercaseBannedUsers = new HashSet<string>();
                 CustomSmileysToUrls = new Dictionary<string, string>();
