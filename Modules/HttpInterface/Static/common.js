@@ -47,10 +47,8 @@ function sendQuick(msg)
 {
     var req = new XMLHttpRequest();
     var body = "message=" + encodeURIComponent(msg);
-    req.open('POST', '/postmessage', true);
+    req.open('POST', '/post', true);
     req.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-    req.setRequestHeader('Content-Length', body.length);
-    req.setRequestHeader('Connection', 'close');
     req.send(body);
 }
 
