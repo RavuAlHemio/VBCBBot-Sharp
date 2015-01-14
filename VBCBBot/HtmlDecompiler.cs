@@ -150,7 +150,7 @@ namespace VBCBBot
                 {
                     if (childNode.Name == "img" && childNode.Attributes.Contains("src"))
                     {
-                        var imageSource = childNode.GetAttributeValue("src", null);
+                        var imageSource = childNode.GetUnescapedAttributeValueOrNull("src");
                         if (SmileyUrlToSymbol.ContainsKey(imageSource))
                         {
                             // it's a smiley
@@ -169,7 +169,7 @@ namespace VBCBBot
                     }
                     else if (childNode.Name == "a" && childNode.Attributes.Contains("href"))
                     {
-                        var href = childNode.GetAttributeValue("href", null);
+                        var href = childNode.GetUnescapedAttributeValueOrNull("href");
                         if (href.StartsWith("mailto:"))
                         {
                             // e-mail link
@@ -179,7 +179,12 @@ namespace VBCBBot
                         else
                         {
                             var grandchildren = childNode.ChildNodes;
-                            if (grandchildren.Count == 1 && grandchildren[0].NodeType == HtmlNodeType.Element && grandchildren[0].Name == "img" && grandchildren[0].GetAttributeValue("src", null) == href)
+                            if (
+                                grandchildren.Count == 1 &&
+                                grandchildren[0].NodeType == HtmlNodeType.Element &&
+                                grandchildren[0].Name == "img" &&
+                                grandchildren[0].GetUnescapedAttributeValueOrNull("src") == href
+                            )
                             {
                                 // this is the link around an icon -- let the img handler take care of it
                                 ret.AddRange(DecompileHtmlNode(childNode));
@@ -206,13 +211,13 @@ namespace VBCBBot
                     }
                     else if (childNode.Name == "font" && childNode.Attributes.Contains("color"))
                     {
-                        ret.Add(new BBCodeDom.Element("color", DecompileHtmlNode(childNode), childNode.GetAttributeValue("color", null)));
+                        ret.Add(new BBCodeDom.Element("color", DecompileHtmlNode(childNode), childNode.GetUnescapedAttributeValueOrNull("color")));
                     }
                     else if (childNode.Name == "span")
                     {
                         if (childNode.Attributes.Contains("style"))
                         {
-                            var style = childNode.GetAttributeValue("style", null);
+                            var style = childNode.GetUnescapedAttributeValueOrNull("style");
                             if (style == "direction: rtl; unicode-bidi: bidi-override;")
                             {
                                 ret.Add(new BBCodeDom.Element("flip", DecompileHtmlNode(childNode)));
@@ -229,7 +234,7 @@ namespace VBCBBot
                         }
                         else if (childNode.Attributes.Contains("class"))
                         {
-                            var cls = childNode.GetAttributeValue("class", null);
+                            var cls = childNode.GetUnescapedAttributeValueOrNull("class");
                             if (cls == "highlight")
                             {
                                 ret.Add(new BBCodeDom.Element("highlight", DecompileHtmlNode(childNode)));
@@ -248,7 +253,7 @@ namespace VBCBBot
                     {
                         if (childNode.Attributes.Contains("style"))
                         {
-                            var style = childNode.GetAttributeValue("style", null);
+                            var style = childNode.GetUnescapedAttributeValueOrNull("style");
                             if (style == "margin-left:40px")
                             {
                                 ret.Add(new BBCodeDom.Element("indent", DecompileHtmlNode(childNode)));
@@ -285,7 +290,7 @@ namespace VBCBBot
                         }
                         else if (childNode.Attributes.Contains("class"))
                         {
-                            var cls = childNode.GetAttributeValue("class", null);
+                            var cls = childNode.GetUnescapedAttributeValueOrNull("class");
                             if (cls == "bbcode_container")
                             {
                                 var codePre = childNode.SelectSingleNode("./pre[@class='bbcode_code']");
@@ -306,10 +311,14 @@ namespace VBCBBot
                                     {
                                         posterName = postedByDiv.SelectSingleNode(".//strong").InnerText;
                                         var posterLinkA = postedByDiv.SelectSingleNode(".//a[@href]");
-                                        if (posterLinkA != null && posterLinkA.GetAttributeValue("href", null).StartsWith("showthread.php?p="))
+                                        if (posterLinkA != null)
                                         {
-                                            var postHrefRest = posterLinkA.GetAttributeValue("href", null).Substring(("showthread.php?p=").Length);
-                                            postNumber = long.Parse(postHrefRest.Substring(0, postHrefRest.IndexOf('#')));
+                                            var postHref = posterLinkA.GetUnescapedAttributeValueOrNull("href");
+                                            if (postHref.StartsWith("showthread.php?p="))
+                                            {
+                                                var postHrefRest = postHref.Substring(("showthread.php?p=").Length);
+                                                postNumber = long.Parse(postHrefRest.Substring(0, postHrefRest.IndexOf('#')));
+                                            }
                                         }
                                     }
 
@@ -340,17 +349,17 @@ namespace VBCBBot
                         {
                             ret.Add(new BBCodeDom.Element("list", DecompileHtmlNode(childNode)));
                         }
-                        else if (childNode.Name == "ol" && childNode.GetAttributeValue("class", null) == "decimal")
+                        else if (childNode.Name == "ol" && childNode.GetUnescapedAttributeValueOrNull("class") == "decimal")
                         {
                             ret.Add(new BBCodeDom.Element("list", DecompileHtmlNode(childNode), "1"));
                         }
-                        else if (childNode.Name == "li" && childNode.GetAttributeValue("style", null) == "")
+                        else if (childNode.Name == "li" && childNode.GetUnescapedAttributeValueOrNull("style") == "")
                         {
                             ret.Add(new BBCodeDom.ListItem(DecompileHtmlNode(childNode)));
                         }
                         else if (childNode.Name == "iframe" && childNode.Attributes.Contains("src"))
                         {
-                            var match = YoutubeEmbedRegex.Match(childNode.GetAttributeValue("src", null));
+                            var match = YoutubeEmbedRegex.Match(childNode.GetUnescapedAttributeValueOrNull("src"));
                             if (match.Success)
                             {
                                 // YouTube embed
@@ -359,7 +368,7 @@ namespace VBCBBot
                             }
                             else
                             {
-                                Logger.WarnFormat("skipping iframe with unknown source {0}", childNode.GetAttributeValue("src", null));
+                                Logger.WarnFormat("skipping iframe with unknown source {0}", childNode.GetUnescapedAttributeValueOrNull("src"));
                             }
                         }
                         else if (childNode.Name == "br")

@@ -448,5 +448,23 @@ namespace VBCBBot
                 yield return current.ToArray();
             }
         }
+
+        /// <summary>
+        /// Returns the unescaped (no HTML entities) value of the node's attribute
+        /// with the given name, or <c>null</c> if the node does not contain such
+        /// an attribute.
+        /// </summary>
+        /// <param name="attributeName">The name of the attribute whose unescaped
+        /// value to return.</param>
+        /// <returns>The unescaped attribute value.</returns>
+        public static string GetUnescapedAttributeValueOrNull(this HtmlNode node, string attributeName)
+        {
+            var ret = node.GetAttributeValue(attributeName, null);
+            if (ret == null)
+            {
+                return ret;
+            }
+            return HtmlEntity.DeEntitize(ret);
+        }
     }
 }
