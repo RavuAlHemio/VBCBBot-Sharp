@@ -466,5 +466,23 @@ namespace VBCBBot
             }
             return HtmlEntity.DeEntitize(ret);
         }
+
+        /// <summary>
+        /// Joins a URI and a relative path. If that fails, returns the relative path only.
+        /// </summary>
+        /// <returns>The joined URI.</returns>
+        /// <param name="baseUri">The base URI.</param>
+        /// <param name="relativePath">The relative path.</param>
+        public static string RobustUriJoin(Uri baseUri, string relativePath)
+        {
+            try
+            {
+                return new Uri(baseUri, relativePath).ToString();
+            }
+            catch (UriFormatException)
+            {
+                return relativePath;
+            }
+        }
     }
 }

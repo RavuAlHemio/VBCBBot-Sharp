@@ -113,7 +113,7 @@ namespace HttpInterface
                     {
                         ret.AppendFormat(
                             "<a class=\"tag-url\" href=\"{0}\">{1}</a>",
-                            HtmlEscape(new Uri(baseUrl, elem.AttributeValue)),
+                            HtmlEscape(Util.RobustUriJoin(baseUrl, elem.AttributeValue)),
                             Convert(elem.Children, baseUrl)
                         );
                     }
@@ -124,7 +124,7 @@ namespace HttpInterface
                         ));
                         ret.AppendFormat(
                             "<a class=\"tag-icon iconlink\" href=\"{0}\"><img class=\"tag-icon icon\" src=\"{0}\" /></a>",
-                            HtmlEscape(new Uri(baseUrl, iconUrl))
+                            HtmlEscape(Util.RobustUriJoin(baseUrl, iconUrl))
                         );
                     }
                     else if (elem.Name == "b" || elem.Name == "i" || elem.Name == "u")
@@ -187,7 +187,7 @@ namespace HttpInterface
                 {
                     ret.AppendFormat(
                         "<img class=\"smiley\" src=\"{0}\" alt=\"{1}\" title=\"{1}\" />",
-                        HtmlEscape(new Uri(baseUrl, smt.SmileyUrl)),
+                        HtmlEscape(Util.RobustUriJoin(baseUrl, smt.SmileyUrl)),
                         HtmlEscape(smt.Text)
                     );
                 }
