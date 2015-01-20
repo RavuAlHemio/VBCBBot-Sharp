@@ -34,9 +34,12 @@ namespace Allograph
 
         public List<Replacement> Replacements { get; set; }
 
+        public double ProbabilityPercent { get; set; }
+
         public AllographConfig(JObject obj)
         {
             Replacements = new List<Replacement>();
+            ProbabilityPercent = 100.0;
 
             var ser = new JsonSerializer();
             ser.Populate(obj.CreateReader(), this);

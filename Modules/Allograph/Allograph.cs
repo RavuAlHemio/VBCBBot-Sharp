@@ -1,16 +1,19 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using System;
+using Newtonsoft.Json.Linq;
 using VBCBBot;
 
 namespace Allograph
 {
     public class Allograph : ModuleV1
     {
-        private AllographConfig _config;
+        private readonly AllographConfig _config;
+        private readonly Random _random;
 
         public Allograph(ChatboxConnector connector, JObject config)
             : base(connector)
         {
             _config = new AllographConfig(config);
+            _random = new Random();
         }
 
         protected override void ProcessUpdatedMessage(ChatboxMessage message, bool isPartOfInitialSalvo = false, bool isEdited = false,
@@ -35,7 +38,13 @@ namespace Allograph
                 newBody = repl.Regex.Replace(newBody, repl.ReplacementString);
             }
 
-            if (newBody != originalBody)
+            if (newBody == originalBody)
+            {
+                return;
+            }
+
+            var thisProbabilityValue = _random.NextDouble() * 100.0;
+            if (thisProbabilityValue < _config.ProbabilityPercent)
             {
                 Connector.SendMessage(newBody);
             }
