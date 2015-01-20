@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Reflection;
+using log4net;
 using Newtonsoft.Json.Linq;
 using VBCBBot;
 
@@ -6,6 +8,8 @@ namespace Allograph
 {
     public class Allograph : ModuleV1
     {
+        private static readonly ILog Logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+
         private readonly AllographConfig _config;
         private readonly Random _random;
 
@@ -46,7 +50,12 @@ namespace Allograph
             var thisProbabilityValue = _random.NextDouble() * 100.0;
             if (thisProbabilityValue < _config.ProbabilityPercent)
             {
+                Logger.DebugFormat("{0:F2} < {1:F2}; posting {2}", thisProbabilityValue, _config.ProbabilityPercent, newBody);
                 Connector.SendMessage(newBody);
+            }
+            else
+            {
+                Logger.DebugFormat("{0:F2} >= {1:F2}; not posting {2}", thisProbabilityValue, _config.ProbabilityPercent, newBody);
             }
         }
     }
