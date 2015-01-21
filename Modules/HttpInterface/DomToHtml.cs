@@ -179,7 +179,7 @@ namespace HttpInterface
                     {
                         ret.AppendFormat(
                             "<script type=\"math/tex\">{0}</script>",
-                            string.Concat(elem.Children.Select(c => c.ToString()))
+                            string.Concat(elem.Children.Select(c => c.BBCodeString))
                         );
                     }
                 }
