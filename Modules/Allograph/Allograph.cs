@@ -39,7 +39,9 @@ namespace Allograph
 
             foreach (var repl in _config.Replacements)
             {
-                newBody = repl.Regex.Replace(newBody, repl.ReplacementString);
+                // substitute the username in the replacement string
+                var replacementStringWithUser = repl.ReplacementString.Replace("{{{username}}}", message.UserName);
+                newBody = repl.Regex.Replace(newBody, replacementStringWithUser);
             }
 
             if (newBody == originalBody)
