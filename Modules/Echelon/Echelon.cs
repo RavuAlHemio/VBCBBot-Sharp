@@ -19,8 +19,8 @@ namespace Echelon
         private static readonly Regex DeleteSpyTrigger = new Regex("^!echelon (un)?deltrigger (0|[1-9][0-9]*)$");
         private static readonly Regex StatsTrigger = new Regex("^!echelon incidents (.+)$");
 
-        private EchelonConfig _config;
-        private Dictionary<string, Regex> _regexCache;
+        private readonly EchelonConfig _config;
+        private readonly Dictionary<string, Regex> _regexCache;
 
         public Echelon(ChatboxConnector connector, JObject config)
             : base(connector)
@@ -33,6 +33,22 @@ namespace Echelon
         {
             var conn = Util.GetDatabaseConnection(_config);
             return new EchelonContext(conn);
+        }
+
+        private UserLevel GetUserLevel(string userName)
+        {
+            if (_config.Spymasters.Contains(userName))
+            {
+                return UserLevel.Spymaster;
+            }
+            else if (_config.Terrorists.Contains(userName))
+            {
+                return UserLevel.Terrorist;
+            }
+            else
+            {
+                return UserLevel.Agent;
+            }
         }
 
         /// <summary>
@@ -48,7 +64,8 @@ namespace Echelon
 
             var target = statsMatch.Groups[1].Value;
             var targetLower = statsMatch.Groups[1].Value.ToLowerInvariant();
-            var salutation = _config.Spymasters.Contains(message.UserName) ? "Spymaster" : "Agent";
+            var userLevel = GetUserLevel(message.UserName);
+            var salutation = userLevel.ToString();
 
             long incidentCount;
             using (var ctx = GetNewContext())
@@ -56,7 +73,15 @@ namespace Echelon
                 incidentCount = ctx.Incidents.Where(i => i.PerpetratorName == targetLower).LongCount();
             }
 
-            if (_config.UsernamesToSpecialCountFormats.ContainsKey(targetLower))
+            if (userLevel == UserLevel.Terrorist)
+            {
+                Connector.SendMessage(string.Format(
+                    "{0} [noparse]{1}[/noparse]: ECHELON does not provide such information to known terrorists.",
+                    salutation,
+                    message.UserName
+                ));
+            }
+            else if (_config.UsernamesToSpecialCountFormats.ContainsKey(targetLower))
             {
                 Connector.SendMessage(string.Format(
                     "{0} [noparse]{1}[/noparse]: {2}",
@@ -102,10 +127,14 @@ namespace Echelon
                 return;
             }
 
-            if (!_config.Spymasters.Contains(message.UserName))
+            var userLevel = GetUserLevel(message.UserName);
+            var salutation = userLevel.ToString();
+
+            if (userLevel != UserLevel.Spymaster)
             {
                 Connector.SendMessage(string.Format(
-                    "Agent [noparse]{0}[/noparse]: Your rank is insufficient for this operation.",
+                    "{0} [noparse]{1}[/noparse]: Your rank is insufficient for this operation.",
+                    salutation,
                     message.UserName
                 ));
                 return;
@@ -129,7 +158,8 @@ namespace Echelon
             }
 
             Connector.SendMessage(string.Format(
-                "Spymaster [noparse]{0}[/noparse]: Done (#{1}).",
+                "{0} [noparse]{1}[/noparse]: Done (#{2}).",
+                salutation,
                 message.UserName,
                 newTriggerID
             ));
@@ -164,10 +194,14 @@ namespace Echelon
                 return;
             }
 
-            if (!_config.Spymasters.Contains(message.UserName))
+            var userLevel = GetUserLevel(message.UserName);
+            var salutation = userLevel.ToString();
+
+            if (userLevel != UserLevel.Spymaster)
             {
                 Connector.SendMessage(string.Format(
-                    "Agent [noparse]{0}[/noparse]: Your rank is insufficient for this operation.",
+                    "{0} [noparse]{1}[/noparse]: Your rank is insufficient for this operation.",
+                    salutation,
                     message.UserName
                 ));
                 return;
@@ -179,7 +213,8 @@ namespace Echelon
                 if (trig == null)
                 {
                     Connector.SendMessage(string.Format(
-                        "Spymaster [noparse]{0}[/noparse]: The trigger with this ID does not exist.",
+                        "{0} [noparse]{1}[/noparse]: The trigger with this ID does not exist.",
+                        salutation,
                         message.UserName
                     ));
                     return;
@@ -193,7 +228,8 @@ namespace Echelon
             }
 
             Connector.SendMessage(string.Format(
-                "Spymaster [noparse]{0}[/noparse]: Updated.",
+                "{0} [noparse]{1}[/noparse]: Updated.",
+                salutation,
                 message.UserName
             ));
         }
@@ -209,10 +245,14 @@ namespace Echelon
                 return;
             }
 
-            if (!_config.Spymasters.Contains(message.UserName))
+            var userLevel = GetUserLevel(message.UserName);
+            var salutation = userLevel.ToString();
+
+            if (userLevel != UserLevel.Spymaster)
             {
                 Connector.SendMessage(string.Format(
-                    "Agent [noparse]{0}[/noparse]: Your rank is insufficient for this operation.",
+                    "{0} [noparse]{1}[/noparse]: Your rank is insufficient for this operation.",
+                    salutation,
                     message.UserName
                 ));
                 return;
@@ -227,7 +267,8 @@ namespace Echelon
                 if (trig == null)
                 {
                     Connector.SendMessage(string.Format(
-                        "Spymaster [noparse]{0}[/noparse]: The trigger with this ID does not exist.",
+                        "{0} [noparse]{1}[/noparse]: The trigger with this ID does not exist.",
+                        salutation,
                         message.UserName
                     ));
                     return;
@@ -236,7 +277,8 @@ namespace Echelon
                 if (trig.Deactivated && !undelete)
                 {
                     Connector.SendMessage(string.Format(
-                        "Spymaster [noparse]{0}[/noparse]: The trigger with this ID is already deleted.",
+                        "{0} [noparse]{1}[/noparse]: The trigger with this ID is already deleted.",
+                        salutation,
                         message.UserName
                     ));
                     return;
@@ -244,7 +286,8 @@ namespace Echelon
                 else if (!trig.Deactivated && undelete)
                 {
                     Connector.SendMessage(string.Format(
-                        "Spymaster [noparse]{0}[/noparse]: The trigger with this ID is still active.",
+                        "{0} [noparse]{1}[/noparse]: The trigger with this ID is still active.",
+                        salutation,
                         message.UserName
                     ));
                     return;
@@ -257,7 +300,8 @@ namespace Echelon
             }
 
             Connector.SendMessage(string.Format(
-                "Spymaster [noparse]{0}[/noparse]: {1}.",
+                "{0} [noparse]{1}[/noparse]: {2}.",
+                salutation,
                 message.UserName,
                 undelete ? "Undeleted" : "Deleted"
             ));

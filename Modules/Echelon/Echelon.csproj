@@ -59,6 +59,7 @@
     <Compile Include="ORM\EchelonContext.cs" />
     <Compile Include="ORM\Trigger.cs" />
     <Compile Include="ORM\Incident.cs" />
+    <Compile Include="UserLevel.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

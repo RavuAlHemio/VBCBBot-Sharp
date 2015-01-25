@@ -12,11 +12,13 @@ namespace Echelon
         public string DatabaseProvider { get; set; }
         public string DatabaseConnectionString { get; set; }
         public HashSet<string> Spymasters { get; set; }
+        public HashSet<string> Terrorists { get; set; }
         public Dictionary<string, string> UsernamesToSpecialCountFormats { get; set; }
 
         public EchelonConfig(JObject obj)
         {
             Spymasters = new HashSet<string>();
+            Terrorists = new HashSet<string>();
             UsernamesToSpecialCountFormats = new Dictionary<string, string>();
 
             var ser = new JsonSerializer();
