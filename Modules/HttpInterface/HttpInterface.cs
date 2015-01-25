@@ -8,7 +8,7 @@ namespace HttpInterface
 {
     public class HttpInterface : ModuleV1
     {
-        private static readonly ILog Logger = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+        //private static readonly ILog Logger = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
         private Responder _responder;
 
