@@ -130,12 +130,12 @@ namespace LinkInfo
                         var titleElement = htmlDoc.DocumentNode.SelectSingleNode(".//title");
                         if (titleElement != null)
                         {
-                            return titleElement.InnerText;
+                            return HtmlEntity.DeEntitize(titleElement.InnerText);
                         }
                         var h1Element = htmlDoc.DocumentNode.SelectSingleNode(".//h1");
                         if (h1Element != null)
                         {
-                            return h1Element.InnerText;
+                            return HtmlEntity.DeEntitize(h1Element.InnerText);
                         }
                         return "(HTML without a title O_o)";
                     case "image/png":
@@ -180,7 +180,7 @@ namespace LinkInfo
                 var foundHints = htmlDoc.DocumentNode.QuerySelectorAll(".qb-bmqc .qb-b");
                 foreach (var hint in foundHints)
                 {
-                    return string.Format("{0} ({1})", text, hint.InnerText);
+                    return string.Format("{0} ({1})", text, HtmlEntity.DeEntitize(hint.InnerText));
                 }
                 return text;
             }
