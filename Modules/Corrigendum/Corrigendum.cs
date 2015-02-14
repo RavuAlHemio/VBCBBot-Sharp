@@ -79,6 +79,11 @@ namespace Corrigendum
                 return;
             }
 
+            if (message.UserName == Connector.ForumConfig.Username)
+            {
+                return;
+            }
+
             var body = RemoveNonWord(message.Body);
             var words = body.Split(' ');
 
