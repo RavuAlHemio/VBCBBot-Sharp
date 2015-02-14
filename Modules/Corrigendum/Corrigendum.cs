@@ -104,7 +104,7 @@ namespace Corrigendum
                     }
 
                     // is the word in the dictionary?
-                    if (wordSet.Contains(word))
+                    if (wordSet.Contains(lowercaseWord))
                     {
                         // it is
                         continue;
