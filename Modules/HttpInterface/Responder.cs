@@ -322,10 +322,12 @@ namespace HttpInterface
                         var senderInfoUrl = new Uri(_interface.CBConnector.ForumConfig.Url, "member.php?u=" + message.UserID.ToString());
                         var senderName = DomToHtml.Convert(message.UserNameDom, _interface.CBConnector.ForumConfig.Url);
                         var body = DomToHtml.Convert(message.BodyDom, _interface.CBConnector.ForumConfig.Url);
+                        var myselfOrOthers = "others";
                         if (message.UserName == _interface.CBConnector.ForumConfig.Username)
                         {
                             // it's me
                             senderName = string.Format("<span class=\"myself\">{0}</span>", senderName);
+                            myselfOrOthers = "myself";
                         }
                         var msgHash = new Hash
                         {
@@ -333,7 +335,8 @@ namespace HttpInterface
                             { "messageID", message.ID.ToString() },
                             { "senderInfoURL", senderInfoUrl.ToString() },
                             { "senderNameHTML", senderName },
-                            { "body", body }
+                            { "body", body },
+                            { "myselfOrOthersClass", myselfOrOthers }
                         };
                         messageStrings.Add(tpl.Render(msgHash));
                     }

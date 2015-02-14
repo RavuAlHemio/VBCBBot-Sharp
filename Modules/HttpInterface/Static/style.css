@@ -54,6 +54,11 @@ button
     color: blue;
 }
 
+.name-bracket.myself
+{
+    color: blue;
+}
+
 .icon,
 .smiley
 {
