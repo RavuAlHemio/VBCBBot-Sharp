@@ -218,7 +218,7 @@ namespace Echelon
                     .ToList()
                     .Select(it => new TriggerAndCount
                         {
-                            TriggerString = "R:" + ctx.Triggers.FirstOrDefault(t => t.Id == it.Key).Regex,
+                            TriggerString = "R " + ctx.Triggers.FirstOrDefault(t => t.Id == it.Key).Regex,
                             Count = it.LongCount()
                         })
                     .OrderByDescending(tac => tac.Count)
@@ -231,7 +231,7 @@ namespace Echelon
                     .Select(dit => new TriggerAndCount
                         {
                             TriggerString = string.Format(
-                                "D:{0}->{1}",
+                                "D {0}->{1}",
                                 ctx.DictionaryTriggers.FirstOrDefault(dt => dt.ID == dit.Key).OriginalString,
                                 ctx.DictionaryTriggers.FirstOrDefault(dt => dt.ID == dit.Key).ReplacementString
                             ),
@@ -258,10 +258,10 @@ namespace Echelon
             triggersAndCounts.Sort();
             triggersAndCounts.Reverse();
 
-            var statsString = string.Join(" || ", triggersAndCounts.Take(_config.RankCount).Select(tac => string.Format("{0}\u00D7 {1}", tac.Count, tac.TriggerString)));
+            var statsString = string.Join(" || ", triggersAndCounts.Take(_config.RankCount).Select(tac => string.Format("{0}\u00D7{1}", tac.Count, tac.TriggerString)));
 
             Connector.SendMessage(string.Format(
-                "{0} [noparse]{1}[/noparse]: Top \u2264{2} incidents for subject [noparse]{3}: {4}[/noparse]",
+                "{0} [noparse]{1}[/noparse]: Top \u2264{2} incidents for subject [noparse]{3} || {4}[/noparse]",
                 salutation,
                 message.UserName,
                 _config.RankCount,
