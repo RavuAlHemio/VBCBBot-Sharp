@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using VBCBBot;
@@ -13,12 +12,14 @@ namespace Echelon
         public string DatabaseConnectionString { get; set; }
         public HashSet<string> Spymasters { get; set; }
         public HashSet<string> Terrorists { get; set; }
+        public HashSet<string> WordLists { get; set; }
         public Dictionary<string, string> UsernamesToSpecialCountFormats { get; set; }
 
         public EchelonConfig(JObject obj)
         {
             Spymasters = new HashSet<string>();
             Terrorists = new HashSet<string>();
+            WordLists = new HashSet<string>();
             UsernamesToSpecialCountFormats = new Dictionary<string, string>();
 
             var ser = new JsonSerializer();

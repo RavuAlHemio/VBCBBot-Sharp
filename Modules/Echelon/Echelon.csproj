@@ -60,6 +60,8 @@
     <Compile Include="ORM\Trigger.cs" />
     <Compile Include="ORM\Incident.cs" />
     <Compile Include="UserLevel.cs" />
+    <Compile Include="ORM\DictionaryTrigger.cs" />
+    <Compile Include="ORM\DictionaryIncident.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

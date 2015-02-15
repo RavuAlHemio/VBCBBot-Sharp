@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using Echelon.ORM;
 using VBCBBot;
@@ -17,16 +19,44 @@ namespace Echelon
         private static readonly Regex ModifySpyTrigger = new Regex("^!echelon modtrigger (0|[1-9][0-9]*)[;]([^;]+)[;](.+)$");
         private static readonly Regex ModifySpyAllTrigger = new Regex("^!echelon modtriggerall (0|[1-9][0-9]*)[;](.+)$");
         private static readonly Regex DeleteSpyTrigger = new Regex("^!echelon (un)?deltrigger (0|[1-9][0-9]*)$");
+
+        private static readonly Regex SpyDictTrigger = new Regex("^!echelon dicttrigger ([^;]+)[;]([^;]+)[;](.+)$");
+        private static readonly Regex ModifySpyDictTrigger = new Regex("^!echelon moddicttrigger (0|[1-9][0-9]*)[;]([^;]+)[;]([^;]+)[;](.+)$");
+        private static readonly Regex DeleteSpyDictTrigger = new Regex("^!echelon (un)?deldicttrigger (0|[1-9][0-9]*)$");
+
         private static readonly Regex StatsTrigger = new Regex("^!echelon incidents (.+)$");
 
         private readonly EchelonConfig _config;
         private readonly Dictionary<string, Regex> _regexCache;
+        private readonly Dictionary<string, HashSet<string>> _wordLists;
 
         public Echelon(ChatboxConnector connector, JObject config)
             : base(connector)
         {
             _config = new EchelonConfig(config);
             _regexCache = new Dictionary<string, Regex>();
+            _wordLists = new Dictionary<string, HashSet<string>>();
+
+            // read the dictionaries
+            foreach (var wordList in _config.WordLists)
+            {
+                using (var dictFile = new StreamReader(wordList, Encoding.UTF8))
+                {
+                    var wordSet = new HashSet<string>();
+
+                    string line;
+                    while ((line = dictFile.ReadLine()) != null)
+                    {
+                        var trimmedLine = line.Trim().ToLower();
+                        if (trimmedLine.Length > 0)
+                        {
+                            wordSet.Add(trimmedLine);
+                        }
+                    }
+
+                    _wordLists[wordList] = wordSet;
+                }
+            }
         }
 
         private EchelonContext GetNewContext()
@@ -51,6 +81,39 @@ namespace Echelon
             }
         }
 
+        protected string RemoveNonWord(string str)
+        {
+            var ret = new StringBuilder();
+            foreach (var c in str)
+            {
+                if (char.IsWhiteSpace(c))
+                {
+                    if (ret.Length > 0 && ret[ret.Length - 1] != ' ')
+                    {
+                        ret.Append(' ');
+                    }
+                }
+                else if (char.IsLetterOrDigit(c))
+                {
+                    ret.Append(c);
+                }
+            }
+            if (ret[ret.Length - 1] == ' ')
+            {
+                ret.Remove(ret.Length - 1, 1);
+            }
+            return ret.ToString();
+        }
+
+        protected void SendInsufficientRankMessage(string actualRank, string username)
+        {
+            Connector.SendMessage(string.Format(
+                "{0} [noparse]{1}[/noparse]: Your rank is insufficient for this operation.",
+                actualRank,
+                username
+            ));
+        }
+
         /// <summary>
         /// Checks whether ECHELON statistics for a user were requested and potentially displays them.
         /// </summary>
@@ -63,15 +126,9 @@ namespace Echelon
             }
 
             var target = statsMatch.Groups[1].Value;
-            var targetLower = statsMatch.Groups[1].Value.ToLowerInvariant();
+            var targetLower = target.ToLowerInvariant();
             var userLevel = GetUserLevel(message.UserName);
             var salutation = userLevel.ToString();
-
-            long incidentCount;
-            using (var ctx = GetNewContext())
-            {
-                incidentCount = ctx.Incidents.Where(i => i.PerpetratorName == targetLower).LongCount();
-            }
 
             if (userLevel == UserLevel.Terrorist)
             {
@@ -80,8 +137,17 @@ namespace Echelon
                     salutation,
                     message.UserName
                 ));
+                return;
             }
-            else if (_config.UsernamesToSpecialCountFormats.ContainsKey(targetLower))
+
+            long incidentCount;
+            using (var ctx = GetNewContext())
+            {
+                incidentCount = ctx.Incidents.Where(i => i.PerpetratorName == targetLower).LongCount();
+                incidentCount += ctx.DictionaryIncidents.Where(di => di.PerpetratorName == targetLower).LongCount();
+            }
+
+            if (_config.UsernamesToSpecialCountFormats.ContainsKey(targetLower))
             {
                 Connector.SendMessage(string.Format(
                     "{0} [noparse]{1}[/noparse]: {2}",
@@ -132,11 +198,7 @@ namespace Echelon
 
             if (userLevel != UserLevel.Spymaster)
             {
-                Connector.SendMessage(string.Format(
-                    "{0} [noparse]{1}[/noparse]: Your rank is insufficient for this operation.",
-                    salutation,
-                    message.UserName
-                ));
+                SendInsufficientRankMessage(salutation, message.UserName);
                 return;
             }
                     
@@ -199,11 +261,7 @@ namespace Echelon
 
             if (userLevel != UserLevel.Spymaster)
             {
-                Connector.SendMessage(string.Format(
-                    "{0} [noparse]{1}[/noparse]: Your rank is insufficient for this operation.",
-                    salutation,
-                    message.UserName
-                ));
+                SendInsufficientRankMessage(salutation, message.UserName);
                 return;
             }
 
@@ -250,11 +308,7 @@ namespace Echelon
 
             if (userLevel != UserLevel.Spymaster)
             {
-                Connector.SendMessage(string.Format(
-                    "{0} [noparse]{1}[/noparse]: Your rank is insufficient for this operation.",
-                    salutation,
-                    message.UserName
-                ));
+                SendInsufficientRankMessage(salutation, message.UserName);
                 return;
             }
 
@@ -307,9 +361,192 @@ namespace Echelon
             ));
         }
 
+        protected void PotentialDictSpy(ChatboxMessage message)
+        {
+            var spyDictMatch = SpyDictTrigger.Match(message.BodyBBCode);
+            if (!spyDictMatch.Success)
+            {
+                return;
+            }
+
+            var userLevel = GetUserLevel(message.UserName);
+            var salutation = userLevel.ToString();
+            if (userLevel != UserLevel.Spymaster)
+            {
+                SendInsufficientRankMessage(salutation, message.UserName);
+                return;
+            }
+
+            var wordList = spyDictMatch.Groups[1].Value.Trim();
+            var origString = spyDictMatch.Groups[2].Value.Trim();
+            var replString = spyDictMatch.Groups[3].Value.Trim();
+
+            if (!_wordLists.ContainsKey(wordList))
+            {
+                Connector.SendMessage(string.Format(
+                    "{0} [noparse]{1}[/noparse]: Unknown word list [noparse]{2}[/noparse].",
+                    salutation,
+                    message.UserName,
+                    Util.ExpungeNoparse(wordList)
+                ));
+                return;
+            }
+
+            long newDictTriggerID;
+            using (var ctx = GetNewContext())
+            {
+                var dictTrig = new DictionaryTrigger
+                {
+                    OriginalString = origString,
+                    ReplacementString = replString,
+                    WordList = wordList,
+                    SpymasterName = message.UserName
+                };
+                ctx.DictionaryTriggers.Add(dictTrig);
+                ctx.SaveChanges();
+                newDictTriggerID = dictTrig.ID;
+            }
+
+            Connector.SendMessage(string.Format(
+                "{0} [noparse]{1}[/noparse]: Done (#{2}).",
+                salutation,
+                message.UserName,
+                newDictTriggerID
+            ));
+        }
+
+        protected void PotentialModifyDictSpy(ChatboxMessage message)
+        {
+            var modSpyDictMatch = ModifySpyDictTrigger.Match(message.BodyBBCode);
+            if (!modSpyDictMatch.Success)
+            {
+                return;
+            }
+
+            var userLevel = GetUserLevel(message.UserName);
+            var salutation = userLevel.ToString();
+            if (userLevel != UserLevel.Spymaster)
+            {
+                SendInsufficientRankMessage(salutation, message.UserName);
+                return;
+            }
+
+            var dictTriggerID = long.Parse(modSpyDictMatch.Groups[1].Value);
+            var wordList = modSpyDictMatch.Groups[2].Value.Trim();
+            var origString = modSpyDictMatch.Groups[3].Value.Trim();
+            var replString = modSpyDictMatch.Groups[4].Value.Trim();
+
+            if (!_wordLists.ContainsKey(wordList))
+            {
+                Connector.SendMessage(string.Format(
+                    "{0} [noparse]{1}[/noparse]: Unknown word list [noparse]{2}[/noparse].",
+                    salutation,
+                    message.UserName,
+                    Util.ExpungeNoparse(wordList)
+                ));
+                return;
+            }
+
+            using (var ctx = GetNewContext())
+            {
+                var dictTrig = ctx.DictionaryTriggers.FirstOrDefault(t => t.ID == dictTriggerID);
+                if (dictTrig == null)
+                {
+                    Connector.SendMessage(string.Format(
+                        "{0} [noparse]{1}[/noparse]: The dictionary trigger with this ID does not exist.",
+                        salutation,
+                        message.UserName
+                    ));
+                    return;
+                }
+
+                dictTrig.WordList = wordList;
+                dictTrig.OriginalString = origString;
+                dictTrig.ReplacementString = replString;
+                dictTrig.SpymasterName = message.UserName;
+
+                ctx.SaveChanges();
+            }
+
+            Connector.SendMessage(string.Format(
+                "{0} [noparse]{1}[/noparse]: Updated.",
+                salutation,
+                message.UserName
+            ));
+        }
+
+        /// <summary>
+        /// Checks whether an existing ECHELON trigger is to be deleted or undeleted and potentially does so.
+        /// </summary>
+        protected void PotentialDeleteDictSpy(ChatboxMessage message)
+        {
+            var delDictMatch = DeleteSpyDictTrigger.Match(message.BodyBBCode);
+            if (!delDictMatch.Success)
+            {
+                return;
+            }
+
+            var userLevel = GetUserLevel(message.UserName);
+            var salutation = userLevel.ToString();
+
+            if (userLevel != UserLevel.Spymaster)
+            {
+                SendInsufficientRankMessage(salutation, message.UserName);
+                return;
+            }
+
+            var undelete = delDictMatch.Groups[1].Success;
+            var dictTriggerID = long.Parse(delDictMatch.Groups[2].Value);
+
+            using (var ctx = GetNewContext())
+            {
+                var dictTrig = ctx.DictionaryTriggers.FirstOrDefault(t => t.ID == dictTriggerID);
+                if (dictTrig == null)
+                {
+                    Connector.SendMessage(string.Format(
+                        "{0} [noparse]{1}[/noparse]: The dictionary trigger with this ID does not exist.",
+                        salutation,
+                        message.UserName
+                    ));
+                    return;
+                }
+
+                if (dictTrig.Deactivated && !undelete)
+                {
+                    Connector.SendMessage(string.Format(
+                        "{0} [noparse]{1}[/noparse]: The dictionary trigger with this ID is already deleted.",
+                        salutation,
+                        message.UserName
+                    ));
+                    return;
+                }
+                else if (!dictTrig.Deactivated && undelete)
+                {
+                    Connector.SendMessage(string.Format(
+                        "{0} [noparse]{1}[/noparse]: The dictionary trigger with this ID is still active.",
+                        salutation,
+                        message.UserName
+                    ));
+                    return;
+                }
+
+                dictTrig.Deactivated = !undelete;
+                dictTrig.SpymasterName = message.UserName;
+
+                ctx.SaveChanges();
+            }
+
+            Connector.SendMessage(string.Format(
+                "{0} [noparse]{1}[/noparse]: {2}.",
+                salutation,
+                message.UserName,
+                undelete ? "Undeleted" : "Deleted"
+            ));
+        }
+
         protected override void ProcessUpdatedMessage(ChatboxMessage message, bool isPartOfInitialSalvo = false, bool isEdited = false, bool isBanned = false)
         {
-            if (isEdited || isPartOfInitialSalvo)
+            if (isEdited || isPartOfInitialSalvo || message.UserName == Connector.ForumConfig.Username)
             {
                 return;
             }
@@ -317,16 +554,23 @@ namespace Echelon
             if (!isBanned)
             {
                 PotentialStats(message);
+
                 PotentialSpy(message);
                 PotentialModifySpy(message);
                 PotentialDeleteSpy(message);
+
+                PotentialDictSpy(message);
+                PotentialModifyDictSpy(message);
+                PotentialDeleteDictSpy(message);
             }
 
             // spy on messages from banned users too
 
             var lowerSenderName = message.UserName.ToLowerInvariant();
+            var bodyWords = RemoveNonWord(message.Body).Split(' ');
             using (var ctx = GetNewContext())
             {
+                // standard triggers
                 var relevantTriggers = ctx.Triggers.Where(t => !t.Deactivated && (t.TargetNameLower == null || t.TargetNameLower == lowerSenderName));
                 foreach (var trigger in relevantTriggers)
                 {
@@ -350,6 +594,56 @@ namespace Echelon
                         PerpetratorName = message.UserName.ToLowerInvariant()
                     };
                     ctx.Incidents.Add(inc);
+                }
+                ctx.SaveChanges();
+
+                // dictionary triggers
+                var relevantDictTriggers = ctx.DictionaryTriggers.Where(t => !t.Deactivated);
+                foreach (var dictTrigger in relevantDictTriggers)
+                {
+                    var wordSet = _wordLists[dictTrigger.WordList];
+
+                    foreach (var word in bodyWords)
+                    {
+                        var lowercaseWord = word.ToLower();
+
+                        // word must contain the "from" substring
+                        if (lowercaseWord.IndexOf(dictTrigger.OriginalString) == -1)
+                        {
+                            // doesn't
+                            continue;
+                        }
+
+                        // is the word in the dictionary?
+                        if (wordSet.Contains(lowercaseWord))
+                        {
+                            // it is
+                            continue;
+                        }
+
+                        // correct the word
+                        var corrected = word.Replace(dictTrigger.OriginalString, dictTrigger.ReplacementString);
+                        var correctedLower = corrected.ToLower();
+
+                        // is the corrected word in the dictionary?
+                        if (!wordSet.Contains(correctedLower))
+                        {
+                            // no
+                            continue;
+                        }
+
+                        // count it as an incident
+                        var dictIncident = new DictionaryIncident
+                        {
+                            TriggerID = dictTrigger.ID,
+                            MessageID = message.ID,
+                            Timestamp = DateTime.UtcNow.ToUniversalTimeForDatabase(),
+                            PerpetratorName = message.UserName.ToLowerInvariant(),
+                            OriginalWord = word,
+                            CorrectedWord = corrected
+                        };
+                        ctx.DictionaryIncidents.Add(dictIncident);
+                    }
                 }
                 ctx.SaveChanges();
             }
