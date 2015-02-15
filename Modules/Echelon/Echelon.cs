@@ -217,7 +217,7 @@ namespace Echelon
                     .GroupBy(i => i.TriggerId)
                     .Select(it => new TriggerAndCount
                         {
-                            TriggerString = "R:" + ctx.Triggers.First(t => t.Id == it.Key).Regex,
+                            TriggerString = "R:" + ctx.Triggers.FirstOrDefault(t => t.Id == it.Key).Regex,
                             Count = it.LongCount()
                         })
                     .OrderByDescending(tac => tac.Count)
@@ -230,8 +230,8 @@ namespace Echelon
                         {
                             TriggerString = string.Format(
                                 "D:{0}->{1}",
-                                ctx.DictionaryTriggers.First(dt => dt.ID == dit.Key).OriginalString,
-                                ctx.DictionaryTriggers.First(dt => dt.ID == dit.Key).ReplacementString
+                                ctx.DictionaryTriggers.FirstOrDefault(dt => dt.ID == dit.Key).OriginalString,
+                                ctx.DictionaryTriggers.FirstOrDefault(dt => dt.ID == dit.Key).ReplacementString
                             ),
                             Count = dit.LongCount()
                         })
@@ -240,7 +240,6 @@ namespace Echelon
 
                 triggersAndCounts.AddRange(triggerCounts);
                 triggersAndCounts.AddRange(dictTriggerCounts);
-
             }
 
             if (triggersAndCounts.Count == 0)
