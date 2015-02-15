@@ -14,6 +14,7 @@ namespace Echelon
         public HashSet<string> Terrorists { get; set; }
         public HashSet<string> WordLists { get; set; }
         public Dictionary<string, string> UsernamesToSpecialCountFormats { get; set; }
+        public int RankCount { get; set; }
 
         public EchelonConfig(JObject obj)
         {
@@ -21,6 +22,7 @@ namespace Echelon
             Terrorists = new HashSet<string>();
             WordLists = new HashSet<string>();
             UsernamesToSpecialCountFormats = new Dictionary<string, string>();
+            RankCount = 5;
 
             var ser = new JsonSerializer();
             ser.Populate(obj.CreateReader(), this);

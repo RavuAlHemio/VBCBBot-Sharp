@@ -62,6 +62,7 @@
     <Compile Include="UserLevel.cs" />
     <Compile Include="ORM\DictionaryTrigger.cs" />
     <Compile Include="ORM\DictionaryIncident.cs" />
+    <Compile Include="TriggerAndCount.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

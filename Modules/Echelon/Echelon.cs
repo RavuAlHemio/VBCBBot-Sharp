@@ -25,6 +25,7 @@ namespace Echelon
         private static readonly Regex DeleteSpyDictTrigger = new Regex("^!echelon (un)?deldicttrigger (0|[1-9][0-9]*)$");
 
         private static readonly Regex StatsTrigger = new Regex("^!echelon incidents (.+)$");
+        private static readonly Regex StatsRankTrigger = new Regex("^!echelon topincidents (.+)$");
 
         private readonly EchelonConfig _config;
         private readonly Dictionary<string, Regex> _regexCache;
@@ -166,7 +167,7 @@ namespace Echelon
                     "{0} [noparse]{1}[/noparse]: Subject [noparse]{2}[/noparse] may or may not have caused any incident.",
                     salutation,
                     message.UserName,
-                    statsMatch.Groups[1].Value
+                    target
                 ));
             }
             else
@@ -175,11 +176,97 @@ namespace Echelon
                     "{0} [noparse]{1}[/noparse]: Subject [noparse]{2}[/noparse] may or may not have caused {3} {4}.",
                     salutation,
                     message.UserName,
-                    statsMatch.Groups[1].Value,
+                    target,
                     incidentCount,
                     incidentCount == 1 ? "incident" : "incidents"
                 ));
             }
+        }
+
+        /// <summary>
+        /// Checks whether top-trigger statistics for a user were requested and potentially displays them.
+        /// </summary>
+        protected void PotentialStatsRank(ChatboxMessage message)
+        {
+            var rankStatsMatch = StatsRankTrigger.Match(message.BodyBBCode);
+            if (!rankStatsMatch.Success)
+            {
+                return;
+            }
+
+            var target = rankStatsMatch.Groups[1].Value;
+            var targetLower = target.ToLowerInvariant();
+            var userLevel = GetUserLevel(message.UserName);
+            var salutation = userLevel.ToString();
+
+            if (userLevel == UserLevel.Terrorist)
+            {
+                Connector.SendMessage(string.Format(
+                    "{0} [noparse]{1}[/noparse]: ECHELON does not provide such information to known terrorists.",
+                    salutation,
+                    message.UserName
+                ));
+                return;
+            }
+
+            var triggersAndCounts = new List<TriggerAndCount>();
+            using (var ctx = GetNewContext())
+            {
+                var triggerCounts = ctx.Incidents
+                    .Where(i => i.PerpetratorName == targetLower)
+                    .GroupBy(i => i.TriggerId)
+                    .Select(it => new TriggerAndCount
+                        {
+                            TriggerString = "R:" + ctx.Triggers.First(t => t.Id == it.Key).Regex,
+                            Count = it.LongCount()
+                        })
+                    .OrderByDescending(tac => tac.Count)
+                    .Take(_config.RankCount);
+
+                var dictTriggerCounts = ctx.DictionaryIncidents
+                    .Where(di => di.PerpetratorName == targetLower)
+                    .GroupBy(di => di.TriggerID)
+                    .Select(dit => new TriggerAndCount
+                        {
+                            TriggerString = string.Format(
+                                "D:{0}->{1}",
+                                ctx.DictionaryTriggers.First(dt => dt.ID == dit.Key).OriginalString,
+                                ctx.DictionaryTriggers.First(dt => dt.ID == dit.Key).ReplacementString
+                            ),
+                            Count = dit.LongCount()
+                        })
+                    .OrderByDescending(tac => tac.Count)
+                    .Take(_config.RankCount);
+
+                triggersAndCounts.AddRange(triggerCounts);
+                triggersAndCounts.AddRange(dictTriggerCounts);
+
+            }
+
+            if (triggersAndCounts.Count == 0)
+            {
+                Connector.SendMessage(string.Format(
+                    "{0} [noparse]{1}[/noparse]: No known incidents for subject [noparse]{2}[/noparse]!",
+                    salutation,
+                    message.UserName,
+                    target
+                ));
+                return;
+            }
+
+            triggersAndCounts.Sort();
+            triggersAndCounts.Reverse();
+
+            var statsString = string.Join(" || ", triggersAndCounts.Select(tac => string.Format("{0}\u00D7 {1}", tac.Count, tac.TriggerString)));
+
+            Connector.SendMessage(string.Format(
+                "{0} [noparse]{1}[/noparse]: Top \u2264{2} incidents for subject [noparse]{3}: {4}[/noparse]",
+                salutation,
+                message.UserName,
+                _config.RankCount,
+                target,
+                Util.ExpungeNoparse(statsString)
+            ));
         }
 
         /// <summary>
@@ -554,6 +641,7 @@ namespace Echelon
             if (!isBanned)
             {
                 PotentialStats(message);
+                PotentialStatsRank(message);
 
                 PotentialSpy(message);
                 PotentialModifySpy(message);
