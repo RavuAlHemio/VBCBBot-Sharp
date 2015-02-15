@@ -215,6 +215,7 @@ namespace Echelon
                 var triggerCounts = ctx.Incidents
                     .Where(i => i.PerpetratorName == targetLower)
                     .GroupBy(i => i.TriggerId)
+                    .ToList()
                     .Select(it => new TriggerAndCount
                         {
                             TriggerString = "R:" + ctx.Triggers.FirstOrDefault(t => t.Id == it.Key).Regex,
@@ -226,6 +227,7 @@ namespace Echelon
                 var dictTriggerCounts = ctx.DictionaryIncidents
                     .Where(di => di.PerpetratorName == targetLower)
                     .GroupBy(di => di.TriggerID)
+                    .ToList()
                     .Select(dit => new TriggerAndCount
                         {
                             TriggerString = string.Format(
