@@ -257,7 +257,7 @@ namespace Echelon
             triggersAndCounts.Sort();
             triggersAndCounts.Reverse();
 
-            var statsString = string.Join(" || ", triggersAndCounts.Select(tac => string.Format("{0}\u00D7 {1}", tac.Count, tac.TriggerString)));
+            var statsString = string.Join(" || ", triggersAndCounts.Take(_config.RankCount).Select(tac => string.Format("{0}\u00D7 {1}", tac.Count, tac.TriggerString)));
 
             Connector.SendMessage(string.Format(
                 "{0} [noparse]{1}[/noparse]: Top \u2264{2} incidents for subject [noparse]{3}: {4}[/noparse]",
