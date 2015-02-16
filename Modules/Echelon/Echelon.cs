@@ -144,8 +144,8 @@ namespace Echelon
             long incidentCount;
             using (var ctx = GetNewContext())
             {
-                incidentCount = ctx.Incidents.Where(i => i.PerpetratorName == targetLower).LongCount();
-                incidentCount += ctx.DictionaryIncidents.Where(di => di.PerpetratorName == targetLower).LongCount();
+                incidentCount = ctx.Incidents.Where(i => !i.Expunged && i.PerpetratorName == targetLower).LongCount();
+                incidentCount += ctx.DictionaryIncidents.Where(di => !di.Expunged && di.PerpetratorName == targetLower).LongCount();
             }
 
             if (_config.UsernamesToSpecialCountFormats.ContainsKey(targetLower))
@@ -213,7 +213,7 @@ namespace Echelon
             using (var ctx = GetNewContext())
             {
                 var triggerCounts = ctx.Incidents
-                    .Where(i => i.PerpetratorName == targetLower)
+                    .Where(i => !i.Expunged && i.PerpetratorName == targetLower)
                     .GroupBy(i => i.TriggerId)
                     .ToList()
                     .Select(it => new TriggerAndCount
@@ -225,7 +225,7 @@ namespace Echelon
                     .Take(_config.RankCount);
 
                 var dictTriggerCounts = ctx.DictionaryIncidents
-                    .Where(di => di.PerpetratorName == targetLower)
+                    .Where(di => !di.Expunged && di.PerpetratorName == targetLower)
                     .GroupBy(di => di.TriggerID)
                     .ToList()
                     .Select(dit => new TriggerAndCount
@@ -680,7 +680,8 @@ namespace Echelon
                         TriggerId = trigger.Id,
                         MessageId = message.ID,
                         Timestamp = DateTime.UtcNow.ToUniversalTimeForDatabase(),
-                        PerpetratorName = message.UserName.ToLowerInvariant()
+                        PerpetratorName = message.UserName.ToLowerInvariant(),
+                        Expunged = false
                     };
                     ctx.Incidents.Add(inc);
                 }
@@ -729,7 +730,8 @@ namespace Echelon
                             Timestamp = DateTime.UtcNow.ToUniversalTimeForDatabase(),
                             PerpetratorName = message.UserName.ToLowerInvariant(),
                             OriginalWord = word,
-                            CorrectedWord = corrected
+                            CorrectedWord = corrected,
+                            Expunged = true
                         };
                         ctx.DictionaryIncidents.Add(dictIncident);
                     }

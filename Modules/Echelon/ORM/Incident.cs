@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -31,5 +32,10 @@ namespace Echelon.ORM
         [Required]
         [Column("perpetrator_name", Order = 5)]
         public string PerpetratorName { get; set; }
+
+        [Required]
+        [Column("expunged", Order = 6)]
+        [DefaultValue(false)]
+        public bool Expunged { get; set; }
     }
 }

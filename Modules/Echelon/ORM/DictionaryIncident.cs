@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -39,5 +40,10 @@ namespace Echelon.ORM
         [Required]
         [Column("corrected_word", Order = 7)]
         public string CorrectedWord { get; set; }
+
+        [Required]
+        [Column("expunged", Order = 8)]
+        [DefaultValue(false)]
+        public bool Expunged { get; set; }
     }
 }
