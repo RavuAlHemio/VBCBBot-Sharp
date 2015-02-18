@@ -99,7 +99,7 @@ namespace Echelon
                     ret.Append(c);
                 }
             }
-            if (ret[ret.Length - 1] == ' ')
+            if (ret.Length > 0 && ret[ret.Length - 1] == ' ')
             {
                 ret.Remove(ret.Length - 1, 1);
             }
