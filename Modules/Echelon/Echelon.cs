@@ -731,7 +731,7 @@ namespace Echelon
                             PerpetratorName = message.UserName.ToLowerInvariant(),
                             OriginalWord = word,
                             CorrectedWord = corrected,
-                            Expunged = true
+                            Expunged = false
                         };
                         ctx.DictionaryIncidents.Add(dictIncident);
                     }
