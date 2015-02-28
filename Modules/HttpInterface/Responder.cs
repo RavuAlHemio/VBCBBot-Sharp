@@ -20,14 +20,14 @@ namespace HttpInterface
         private static readonly Regex EditMessageRegex = new Regex("^/edit-message/(0|[1-9][0-9]*)$");
         private static readonly Regex AllowedStaticPathFormat = new Regex("^[a-zA-Z0-9-.]+$");
 
-        private HttpInterface _interface;
+        private readonly HttpInterface _interface;
 
-        private HttpListener _listener;
-        private Thread _acceptorThread;
-        private CancellationTokenSource _canceller;
+        private readonly HttpListener _listener;
+        private readonly Thread _acceptorThread;
+        private readonly CancellationTokenSource _canceller;
         private Guid? _authGuid;
-        private string _staticPath;
-        private string _templatePath;
+        private readonly string _staticPath;
+        private readonly string _templatePath;
 
         public Responder(HttpInterface iface)
         {
