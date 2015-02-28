@@ -55,6 +55,7 @@ namespace VBCBBot
         private long _lastMessageReceived = -1;
         private volatile bool _stopReading = false;
         private int _lastDSTUpdateHourUTC = -1;
+        private DateTime _updatingUntil;
 
         public DateTime? StfuDeadline = null;
 
@@ -223,8 +224,24 @@ namespace VBCBBot
         public void Start()
         {
             _stopReading = false;
+            _updatingUntil = DateTime.MaxValue;
             Login();
             _readingThread.Start();
+        }
+
+        public void Pause()
+        {
+            _updatingUntil = DateTime.MinValue;
+        }
+
+        public void Unpause()
+        {
+            _updatingUntil = DateTime.MaxValue;
+        }
+
+        public void UnpauseUntil(DateTime target)
+        {
+            _updatingUntil = target;
         }
 
         public void Stop()
@@ -762,7 +779,10 @@ namespace VBCBBot
             {
                 try
                 {
-                    FetchNewMessages();
+                    if (_updatingUntil >= DateTime.Now)
+                    {
+                        FetchNewMessages();
+                    }
                     penaltyCoefficient = 1;
                 }
                 catch (Exception ex)
