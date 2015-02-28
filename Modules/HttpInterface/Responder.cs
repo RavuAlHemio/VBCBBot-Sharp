@@ -262,6 +262,12 @@ namespace HttpInterface
             }
             else if (path == "/" && method == "GET")
             {
+                // if pausing is active, unpause the connector for the given time span
+                if (_interface.Config.PauseConnectorOnInactivityMinutes > 0)
+                {
+                    _interface.CBConnector.UnpauseUntil(DateTime.Now.AddMinutes(_interface.Config.PauseConnectorOnInactivityMinutes));
+                }
+
                 // assemble the quick-messages
                 var quickMessageString = new StringBuilder("<span class=\"quickmessagelist\">");
                 foreach (var quickMessage in _interface.Config.QuickMessages)

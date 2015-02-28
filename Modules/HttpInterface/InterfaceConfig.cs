@@ -16,6 +16,7 @@ namespace HttpInterface
         public string TemplateDirectory { get; set; }
         public string StaticDirectory { get; set; }
         public HashSet<string> DeviceAccessCodes { get; set; }
+        public int PauseConnectorOnInactivityMinutes { get; set; }
 
         public InterfaceConfig(JObject obj)
         {
@@ -24,6 +25,7 @@ namespace HttpInterface
             TemplateDirectory = "HttpTemplates";
             StaticDirectory = "HttpStatic";
             DeviceAccessCodes = new HashSet<string>();
+            PauseConnectorOnInactivityMinutes = 0;
 
             var ser = new JsonSerializer();
             ser.Populate(obj.CreateReader(), this);
