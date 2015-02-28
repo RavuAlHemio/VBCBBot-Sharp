@@ -244,6 +244,14 @@ namespace VBCBBot
             _updatingUntil = target;
         }
 
+        public bool IsPaused
+        {
+            get
+            {
+                return DateTime.Now > _updatingUntil;
+            }
+        }
+
         public void Stop()
         {
             _stopReading = true;
@@ -779,7 +787,7 @@ namespace VBCBBot
             {
                 try
                 {
-                    if (_updatingUntil >= DateTime.Now)
+                    if (!IsPaused)
                     {
                         FetchNewMessages();
                     }
